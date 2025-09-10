@@ -14,10 +14,6 @@ import {
     CircularProgress,
     Alert,
     Divider,
-    List,
-    ListItem,
-    ListItemIcon,
-    ListItemText,
     Card,
     CardContent,
     CardActions,
@@ -27,15 +23,8 @@ import {
     FormControlLabel
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import {
-    Dashboard as DashboardIcon,
-    Restaurant as RestaurantIcon,
-    Sync as SyncIcon,
-    Store as StoreIcon,
-    Category as CategoryIcon,
-    Menu as MenuIcon,
-    Delete as DeleteIcon
-} from '@mui/icons-material';
+import { Menu as MenuIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import Sidebar from './Sidebar';
 
 const drawerWidth = 240;
 
@@ -407,14 +396,6 @@ function Loja() {
         navigate('/');
     };
 
-    const menuItems = [
-        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-        { text: 'Sincronização', icon: <SyncIcon />, path: '/sincronizacao' },
-        { text: 'Catálogo', icon: <CategoryIcon />, path: '/catalogo' },
-        { text: 'Pedidos', icon: <RestaurantIcon />, path: '/pedidos' },
-        { text: 'Loja', icon: <StoreIcon />, path: '/loja' },
-    ];
-
     if (!user) {
         return null;
     }
@@ -456,25 +437,7 @@ function Loja() {
                         '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
                     }}
                 >
-                    <Toolbar />
-                    <List>
-                        {menuItems.map((item) => (
-                            <ListItem
-                                button
-                                key={item.text}
-                                onClick={() => {
-                                    navigate(item.path);
-                                    setMobileOpen(false);
-                                }}
-                                selected={location.pathname === item.path}
-                            >
-                                <ListItemIcon>
-                                    {item.icon}
-                                </ListItemIcon>
-                                <ListItemText primary={item.text} />
-                            </ListItem>
-                        ))}
-                    </List>
+                    <Sidebar mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
                 </Drawer>
                 <Drawer
                     variant="permanent"
@@ -484,22 +447,7 @@ function Loja() {
                     }}
                     open
                 >
-                    <Toolbar />
-                    <List>
-                        {menuItems.map((item) => (
-                            <ListItem
-                                button
-                                key={item.text}
-                                onClick={() => navigate(item.path)}
-                                selected={location.pathname === item.path}
-                            >
-                                <ListItemIcon>
-                                    {item.icon}
-                                </ListItemIcon>
-                                <ListItemText primary={item.text} />
-                            </ListItem>
-                        ))}
-                    </List>
+                    <Sidebar mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
                 </Drawer>
             </Box>
             <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}>
