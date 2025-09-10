@@ -15,7 +15,16 @@ import {
   CssBaseline,
   IconButton,
   CircularProgress,
-  Alert
+  Alert,
+  Card,
+  CardContent,
+  Grid,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Paper
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -37,6 +46,13 @@ function Dashboard() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [salesMetrics, setSalesMetrics] = useState({
+    totalSales: 0,
+    totalOrders: 0,
+    averageOrderValue: 0,
+    completedOrders: 0
+  });
 
   useEffect(() => {
     // Check if user is logged in
@@ -47,36 +63,80 @@ function Dashboard() {
       // In a real app, you might want to decode the token to get user info
       setUser({ name: 'Usuário' });
       
-      // Fetch merchant data
-      fetchMerchantData(token);
+      // Fetch merchant data and orders
+      fetchDashboardData(token);
     }
   }, [navigate]);
 
-  const fetchMerchantData = async (token) => {
+  const fetchDashboardData = async (token) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:8090/api/erp/merchant', {
+      // Fetch merchant data
+      const merchantResponse = await fetch('http://localhost:8090/api/hub/ifood/merchant', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        setMerchantData(data);
+      if (merchantResponse.ok) {
+        const merchantData = await merchantResponse.json();
+        setMerchantData(merchantData);
       } else {
-        const errorData = await response.json();
+        const errorData = await merchantResponse.json();
         setError(errorData.message || 'Erro ao carregar dados do merchant');
       }
+      
+      // Fetch orders data
+      const ordersResponse = await fetch('http://localhost:8090/api/erp/orders', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (ordersResponse.ok) {
+        const ordersData = await ordersResponse.json();
+        setOrders(ordersData.orders);
+        
+        // Calculate sales metrics
+        calculateSalesMetrics(ordersData.orders);
+      } else {
+        const errorData = await ordersResponse.json();
+        setError(prevError => prevError ? `${prevError}; ${errorData.message}` : errorData.message || 'Erro ao carregar pedidos');
+      }
     } catch (error) {
-      console.error('Error fetching merchant data:', error);
+      console.error('Error fetching dashboard data:', error);
       setError('Erro de conexão. Por favor, tente novamente.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateSalesMetrics = (orders) => {
+    let totalSales = 0;
+    let totalOrders = orders.length;
+    let completedOrders = 0;
+    
+    orders.forEach(order => {
+      if (order.order.status === 'Concluded') {
+        completedOrders++;
+        // Calculate order total
+        const orderTotal = order.order.items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+        totalSales += orderTotal;
+      }
+    });
+    
+    const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
+    
+    setSalesMetrics({
+      totalSales,
+      totalOrders,
+      averageOrderValue,
+      completedOrders
+    });
   };
 
   const handleDrawerToggle = () => {
@@ -210,12 +270,92 @@ function Dashboard() {
                   </Typography>
                 </Box>
               )}
+              
               <Typography variant="h5" gutterBottom>
-                Bem-vindo ao Dashboard
+                Resumo de Vendas
               </Typography>
-              <Typography variant="body1">
-                Você está autenticado e pronto para usar o Portal iFood.
-              </Typography>
+              
+              {/* Sales Metrics Cards */}
+              <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        Total de Vendas
+                      </Typography>
+                      <Typography variant="h4" color="primary">
+                        R$ {salesMetrics.totalSales.toFixed(2).replace('.', ',')}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        Total de Pedidos
+                      </Typography>
+                      <Typography variant="h4" color="secondary">
+                        {salesMetrics.totalOrders}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        Pedidos Concluídos
+                      </Typography>
+                      <Typography variant="h4" color="success.main">
+                        {salesMetrics.completedOrders}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        Ticket Médio
+                      </Typography>
+                      <Typography variant="h4" color="info.main">
+                        R$ {salesMetrics.averageOrderValue.toFixed(2).replace('.', ',')}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+              
+              {/* Recent Orders Table */}
+              <Paper elevation={3} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Últimos Pedidos
+                </Typography>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Nº Pedido</TableCell>
+                      <TableCell>Cliente</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Valor</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {orders.slice(0, 5).map((order) => {
+                      const orderTotal = order.order.items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+                      return (
+                        <TableRow key={order.order.id}>
+                          <TableCell>#{order.order.id.substring(0, 8)}</TableCell>
+                          <TableCell>{order.consumer.name}</TableCell>
+                          <TableCell>{order.order.status}</TableCell>
+                          <TableCell>R$ {orderTotal.toFixed(2).replace('.', ',')}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </Paper>
             </>
           )}
         </Container>
