@@ -14,10 +14,8 @@ import {
   CssBaseline,
   AppBar,
   IconButton,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -37,6 +35,8 @@ function Loja() {
   const [user, setUser] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [storeInfo, setStoreInfo] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     // Check if user is logged in
@@ -46,19 +46,37 @@ function Loja() {
     } else {
       // In a real app, you might want to decode the token to get user info
       setUser({ name: 'Usuário' });
-      
-      // Mock store data
-      setStoreInfo({
-        name: 'Restaurante do Ponto',
-        corporateName: 'Restaurante do Ponto LTDA',
-        cnpj: '00.000.000/0000-00',
-        address: 'Av. Paulista, 1000 - São Paulo/SP',
-        phone: '(11) 99999-9999',
-        status: 'Aberto',
-        openingHours: 'Seg-Sex: 18:00-23:00 | Sáb-Dom: 18:00-00:00'
-      });
+      // Fetch store info from API
+      fetchStoreInfo(token);
     }
   }, [navigate]);
+
+  const fetchStoreInfo = async (token) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('http://localhost:8090/api/erp/store', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStoreInfo(data);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Erro ao carregar informações da loja');
+      }
+    } catch (error) {
+      console.error('Error fetching store info:', error);
+      setError('Erro de conexão. Por favor, tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -170,76 +188,89 @@ function Loja() {
           <Typography variant="h4" gutterBottom>
             Loja
           </Typography>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={8}>
-              <Paper elevation={3} sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Informações da Loja
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="textSecondary">Nome Fantasia</Typography>
-                    <Typography variant="body1">{storeInfo.name}</Typography>
+          
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={8}>
+                <Paper elevation={3} sx={{ p: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Informações da Loja
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="textSecondary">Nome Fantasia</Typography>
+                      <Typography variant="body1">{storeInfo.name || 'Não informado'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="textSecondary">Razão Social</Typography>
+                      <Typography variant="body1">{storeInfo.corporateName || 'Não informado'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="textSecondary">CNPJ</Typography>
+                      <Typography variant="body1">{storeInfo.cnpj || 'Não informado'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="textSecondary">Telefone</Typography>
+                      <Typography variant="body1">{storeInfo.phone || 'Não informado'}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="textSecondary">Endereço</Typography>
+                      <Typography variant="body1">{storeInfo.address || 'Não informado'}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="textSecondary">Horário de Funcionamento</Typography>
+                      <Typography variant="body1">{storeInfo.openingHours || 'Não informado'}</Typography>
+                    </Grid>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="textSecondary">Razão Social</Typography>
-                    <Typography variant="body1">{storeInfo.corporateName}</Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="textSecondary">CNPJ</Typography>
-                    <Typography variant="body1">{storeInfo.cnpj}</Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="textSecondary">Telefone</Typography>
-                    <Typography variant="body1">{storeInfo.phone}</Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="textSecondary">Endereço</Typography>
-                    <Typography variant="body1">{storeInfo.address}</Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="textSecondary">Horário de Funcionamento</Typography>
-                    <Typography variant="body1">{storeInfo.openingHours}</Typography>
-                  </Grid>
-                </Grid>
-                <CardActions sx={{ mt: 2 }}>
-                  <Button variant="contained" size="small">Editar Informações</Button>
-                </CardActions>
-              </Paper>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-                <Typography variant="h6" gutterBottom>
-                  Status da Loja
-                </Typography>
-                <Card variant="outlined" sx={{ mb: 2 }}>
-                  <CardContent>
-                    <Typography variant="body2" color="textSecondary" gutterBottom>
-                      Status Atual
-                    </Typography>
-                    <Typography 
-                      variant="h5" 
-                      sx={{ 
-                        color: storeInfo.status === 'Aberto' ? 'success.main' : 'error.main',
-                        fontWeight: 'bold'
-                      }}
+                  <CardActions sx={{ mt: 2 }}>
+                    <Button variant="contained" size="small">Editar Informações</Button>
+                  </CardActions>
+                </Paper>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
+                  <Typography variant="h6" gutterBottom>
+                    Status da Loja
+                  </Typography>
+                  <Card variant="outlined" sx={{ mb: 2 }}>
+                    <CardContent>
+                      <Typography variant="body2" color="textSecondary" gutterBottom>
+                        Status Atual
+                      </Typography>
+                      <Typography 
+                        variant="h5" 
+                        sx={{ 
+                          color: storeInfo.status === 'Aberto' ? 'success.main' : 'error.main',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        {storeInfo.status || 'Desconhecido'}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                  <CardActions>
+                    <Button 
+                      variant="contained" 
+                      color={storeInfo.status === 'Aberto' ? 'error' : 'success'}
+                      fullWidth
                     >
-                      {storeInfo.status}
-                    </Typography>
-                  </CardContent>
-                </Card>
-                <CardActions>
-                  <Button 
-                    variant="contained" 
-                    color={storeInfo.status === 'Aberto' ? 'error' : 'success'}
-                    fullWidth
-                  >
-                    {storeInfo.status === 'Aberto' ? 'Fechar Loja' : 'Abrir Loja'}
-                  </Button>
-                </CardActions>
-              </Paper>
+                      {storeInfo.status === 'Aberto' ? 'Fechar Loja' : 'Abrir Loja'}
+                    </Button>
+                  </CardActions>
+                </Paper>
+              </Grid>
             </Grid>
-          </Grid>
+          )}
         </Container>
       </Box>
     </Box>

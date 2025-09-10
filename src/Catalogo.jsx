@@ -16,10 +16,8 @@ import {
   CssBaseline,
   AppBar,
   IconButton,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -39,6 +37,8 @@ function Catalogo() {
   const [user, setUser] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     // Check if user is logged in
@@ -48,16 +48,37 @@ function Catalogo() {
     } else {
       // In a real app, you might want to decode the token to get user info
       setUser({ name: 'Usuário' });
-      
-      // Mock product data
-      setProducts([
-        { id: 1, name: 'Hamburguer Clássico', price: 'R$ 25,90', category: 'Lanches' },
-        { id: 2, name: 'Pizza Margherita', price: 'R$ 35,90', category: 'Pizzas' },
-        { id: 3, name: 'Refrigerante 2L', price: 'R$ 12,90', category: 'Bebidas' },
-        { id: 4, name: 'Batata Frita', price: 'R$ 15,90', category: 'Acompanhamentos' }
-      ]);
+      // Fetch products from API
+      fetchProducts(token);
     }
   }, [navigate]);
+
+  const fetchProducts = async (token) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('http://localhost:8090/api/erp/products', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProducts(data);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Erro ao carregar produtos');
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setError('Erro de conexão. Por favor, tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -169,6 +190,13 @@ function Catalogo() {
           <Typography variant="h4" gutterBottom>
             Catálogo
           </Typography>
+          
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          
           <Paper elevation={3} sx={{ p: 3, mt: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">
@@ -178,31 +206,48 @@ function Catalogo() {
                 Adicionar Produto
               </Button>
             </Box>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Nome</TableCell>
-                    <TableCell>Categoria</TableCell>
-                    <TableCell>Preço</TableCell>
-                    <TableCell>Ações</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {products.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell>{product.name}</TableCell>
-                      <TableCell>{product.category}</TableCell>
-                      <TableCell>{product.price}</TableCell>
-                      <TableCell>
-                        <Button size="small" variant="outlined">Editar</Button>
-                        <Button size="small" variant="outlined" color="error" sx={{ ml: 1 }}>Excluir</Button>
-                      </TableCell>
+            
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Nome</TableCell>
+                      <TableCell>Categoria</TableCell>
+                      <TableCell>Preço</TableCell>
+                      <TableCell>Ações</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {products.length > 0 ? (
+                      products.map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell>{product.name || 'Nome não informado'}</TableCell>
+                          <TableCell>{product.category || 'Categoria não informada'}</TableCell>
+                          <TableCell>
+                            {product.price ? `R$ ${parseFloat(product.price).toFixed(2).replace('.', ',')}` : 'R$ 0,00'}
+                          </TableCell>
+                          <TableCell>
+                            <Button size="small" variant="outlined">Editar</Button>
+                            <Button size="small" variant="outlined" color="error" sx={{ ml: 1 }}>Excluir</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center">
+                          Nenhum produto encontrado
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </Paper>
         </Container>
       </Box>

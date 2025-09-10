@@ -14,7 +14,8 @@ import {
   CssBaseline,
   AppBar,
   IconButton,
-  ListItemIcon
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -33,6 +34,9 @@ function Sincronizacao() {
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [syncData, setSyncData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     // Check if user is logged in
@@ -42,8 +46,37 @@ function Sincronizacao() {
     } else {
       // In a real app, you might want to decode the token to get user info
       setUser({ name: 'Usuário' });
+      // Fetch sync data from API
+      fetchSyncData(token);
     }
   }, [navigate]);
+
+  const fetchSyncData = async (token) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('http://localhost:8090/api/erp/sync/status', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSyncData(data);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Erro ao carregar status de sincronização');
+      }
+    } catch (error) {
+      console.error('Error fetching sync data:', error);
+      setError('Erro de conexão. Por favor, tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -155,31 +188,59 @@ function Sincronizacao() {
           <Typography variant="h4" gutterBottom>
             Sincronização
           </Typography>
+          
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          
           <Paper elevation={3} sx={{ p: 3, mt: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Status da Sincronização
-            </Typography>
-            <Typography variant="body1" paragraph>
-              A sincronização com o sistema iFood está funcionando corretamente.
-            </Typography>
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="h6" gutterBottom>
-              Última Sincronização
-            </Typography>
-            <List>
-              <ListItem>
-                <ListItemText primary="Produtos" secondary="Sincronizado há 5 minutos" />
-              </ListItem>
-              <ListItem>
-                <ListItemText primary="Cardápio" secondary="Sincronizado há 10 minutos" />
-              </ListItem>
-              <ListItem>
-                <ListItemText primary="Pedidos" secondary="Sincronizado há 2 minutos" />
-              </ListItem>
-            </List>
-            <Button variant="contained" sx={{ mt: 2 }}>
-              Sincronizar Agora
-            </Button>
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <>
+                <Typography variant="h6" gutterBottom>
+                  Status da Sincronização
+                </Typography>
+                <Typography variant="body1" paragraph>
+                  {syncData?.status || 'Status não disponível'}
+                </Typography>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  Última Sincronização
+                </Typography>
+                <List>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Produtos" 
+                      secondary={syncData?.lastProductSync || 'Nunca sincronizado'} 
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Cardápio" 
+                      secondary={syncData?.lastMenuSync || 'Nunca sincronizado'} 
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Pedidos" 
+                      secondary={syncData?.lastOrderSync || 'Nunca sincronizado'} 
+                    />
+                  </ListItem>
+                </List>
+                <Button 
+                  variant="contained" 
+                  sx={{ mt: 2 }}
+                  onClick={() => fetchSyncData(localStorage.getItem('authToken'))}
+                >
+                  Sincronizar Agora
+                </Button>
+              </>
+            )}
           </Paper>
         </Container>
       </Box>

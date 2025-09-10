@@ -13,7 +13,9 @@ import {
   ListItemText,
   Divider,
   CssBaseline,
-  IconButton
+  IconButton,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -33,6 +35,8 @@ function Dashboard() {
   const [user, setUser] = useState(null);
   const [merchantData, setMerchantData] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     // Check if user is logged in
@@ -48,13 +52,12 @@ function Dashboard() {
     }
   }, [navigate]);
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
-
   const fetchMerchantData = async (token) => {
     try {
-      const response = await fetch('http://localhost:8090/api/hub/ifood/merchant', {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('http://localhost:8090/api/erp/merchant', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -65,11 +68,19 @@ function Dashboard() {
         const data = await response.json();
         setMerchantData(data);
       } else {
-        console.error('Failed to fetch merchant data');
+        const errorData = await response.json();
+        setError(errorData.message || 'Erro ao carregar dados do merchant');
       }
     } catch (error) {
       console.error('Error fetching merchant data:', error);
+      setError('Erro de conexão. Por favor, tente novamente.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
   };
 
   const handleLogout = () => {
@@ -145,6 +156,7 @@ function Dashboard() {
               </ListItem>
             ))}
           </List>
+          <Divider />
         </Drawer>
         <Drawer
           variant="permanent"
@@ -176,22 +188,36 @@ function Dashboard() {
       <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}>
         <Toolbar />
         <Container maxWidth="lg">
-          {merchantData && (
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h4" gutterBottom>
-                {merchantData.name}
-              </Typography>
-              <Typography variant="h6" color="textSecondary">
-                {merchantData.corporateName}
-              </Typography>
-            </Box>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
           )}
-          <Typography variant="h5" gutterBottom>
-            Bem-vindo ao Dashboard
-          </Typography>
-          <Typography variant="body1">
-            Você está autenticado e pronto para usar o Portal iFood.
-          </Typography>
+          
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <>
+              {merchantData && (
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h4" gutterBottom>
+                    {merchantData.name || 'Nome não informado'}
+                  </Typography>
+                  <Typography variant="h6" color="textSecondary">
+                    {merchantData.corporateName || 'Razão social não informada'}
+                  </Typography>
+                </Box>
+              )}
+              <Typography variant="h5" gutterBottom>
+                Bem-vindo ao Dashboard
+              </Typography>
+              <Typography variant="body1">
+                Você está autenticado e pronto para usar o Portal iFood.
+              </Typography>
+            </>
+          )}
         </Container>
       </Box>
     </Box>
