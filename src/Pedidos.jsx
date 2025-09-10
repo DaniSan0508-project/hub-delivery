@@ -22,7 +22,12 @@ import {
     ListItemIcon,
     ListItemText,
     CircularProgress,
-    Alert
+    Alert,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -44,6 +49,7 @@ function Pedidos() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [confirmDialog, setConfirmDialog] = useState({ open: false, orderId: null, action: null, actionLabel: '' });
 
     useEffect(() => {
         // Check if user is logged in
@@ -76,7 +82,7 @@ function Pedidos() {
                 const transformedOrders = data.orders.map(order => ({
                     id: order.order.id,
                     customer: order.consumer.name,
-                    status: order.order.status || 'cfm', // Default to 'cfm' if status is not provided
+                    status: order.order.status || 'CONFIRMED', // Default to 'CONFIRMED' if status is not provided
                     total: order.order.items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0),
                     createdAt: 'Horário não disponível' // API doesn't provide this yet
                 }));
@@ -91,6 +97,109 @@ function Pedidos() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const updateOrderStatus = async (orderId, status) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`http://localhost:8090/api/orders/${orderId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status })
+            });
+
+            if (response.ok) {
+                // Refresh orders after status update
+                fetchOrders(token);
+            } else {
+                const errorData = await response.json();
+                setError(errorData.message || 'Erro ao atualizar status do pedido');
+            }
+        } catch (error) {
+            console.error('Error updating order status:', error);
+            setError('Erro de conexão. Por favor, tente novamente.');
+        }
+    };
+
+    const startSeparation = async (orderId) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`http://localhost:8090/api/orders/${orderId}/start-separation`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                // Refresh orders after starting separation
+                fetchOrders(token);
+            } else {
+                const errorData = await response.json();
+                setError(errorData.message || 'Erro ao iniciar separação do pedido');
+            }
+        } catch (error) {
+            console.error('Error starting separation:', error);
+            setError('Erro de conexão. Por favor, tente novamente.');
+        }
+    };
+
+    const endSeparation = async (orderId) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`http://localhost:8090/api/orders/${orderId}/end-separation`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                // Refresh orders after ending separation
+                fetchOrders(token);
+            } else {
+                const errorData = await response.json();
+                setError(errorData.message || 'Erro ao finalizar separação do pedido');
+            }
+        } catch (error) {
+            console.error('Error ending separation:', error);
+            setError('Erro de conexão. Por favor, tente novamente.');
+        }
+    };
+
+    const handleActionClick = (orderId, action, actionLabel) => {
+        setConfirmDialog({ open: true, orderId, action, actionLabel });
+    };
+
+    const handleConfirmAction = async () => {
+        const { orderId, action } = confirmDialog;
+        setConfirmDialog({ open: false, orderId: null, action: null, actionLabel: '' });
+
+        switch (action) {
+            case 'startSeparation':
+                await startSeparation(orderId);
+                break;
+            case 'endSeparation':
+                await endSeparation(orderId);
+                break;
+            case 'dispatch':
+                await updateOrderStatus(orderId, 'DISPATCHED');
+                break;
+            case 'confirm':
+                await updateOrderStatus(orderId, 'CONFIRMED');
+                break;
+            default:
+                break;
+        }
+    };
+
+    const handleCloseDialog = () => {
+        setConfirmDialog({ open: false, orderId: null, action: null, actionLabel: '' });
     };
 
     const handleDrawerToggle = () => {
@@ -112,13 +221,17 @@ function Pedidos() {
 
     const getStatusColor = (status) => {
         switch (status) {
+            case 'Placed':
+                return 'info';
             case 'Confirmed':
                 return 'success';
-            case 'SPE':
+            case 'SPS':
                 return 'warning';
-            case 'Dispatched':
+            case 'SPE':
                 return 'info';
-            case 'CON':
+            case 'Dispatched':
+                return 'default';
+            case 'Concluded':
                 return 'default';
             default:
                 return 'default';
@@ -127,18 +240,35 @@ function Pedidos() {
 
     const getStatusText = (status) => {
         switch (status) {
+            case 'Placed':
+                return 'Recebido';
             case 'Confirmed':
                 return 'Confirmado';
             case 'SPS':
-                return 'Iniciando separação';
+                return 'Separação iniciada';
             case 'SPE':
                 return 'Separação finalizada';
             case 'Dispatched':
                 return 'Despachado';
-            case 'CON':
+            case 'Concluded':
                 return 'Concluído';
             default:
                 return status;
+        }
+    };
+
+    const getAvailableActions = (status) => {
+        switch (status) {
+            case 'Placed':
+                return [{ action: 'confirm', label: 'Confirmar Pedido', color: 'primary' }];
+            case 'Confirmed':
+                return [{ action: 'startSeparation', label: 'Iniciar Separação', color: 'primary' }];
+            case 'SPS':
+                return [{ action: 'endSeparation', label: 'Finalizar Separação', color: 'secondary' }];
+            case 'SPE':
+                return [{ action: 'dispatch', label: 'Despachar', color: 'success' }];
+            default:
+                return [];
         }
     };
 
@@ -271,28 +401,48 @@ function Pedidos() {
                                     </TableHead>
                                     <TableBody>
                                         {orders.length > 0 ? (
-                                            orders.map((order) => (
-                                                <TableRow key={order.id}>
-                                                    <TableCell>#{order.id.substring(0, 8)}</TableCell>
-                                                    <TableCell>{order.customer || 'Cliente não informado'}</TableCell>
-                                                    <TableCell>
-                                                        R$ {parseFloat(order.total).toFixed(2).replace('.', ',')}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Chip
-                                                            label={getStatusText(order.status)}
-                                                            color={getStatusColor(order.status)}
-                                                            size="small"
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {order.createdAt || 'Horário não informado'}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Button size="small" variant="outlined">Ver</Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
+                                            orders.map((order) => {
+                                                const actions = getAvailableActions(order.status);
+                                                return (
+                                                    <TableRow key={order.id}>
+                                                        <TableCell>#{order.id.substring(0, 8)}</TableCell>
+                                                        <TableCell>{order.customer || 'Cliente não informado'}</TableCell>
+                                                        <TableCell>
+                                                            R$ {parseFloat(order.total).toFixed(2).replace('.', ',')}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Chip
+                                                                label={getStatusText(order.status)}
+                                                                color={getStatusColor(order.status)}
+                                                                size="small"
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {order.createdAt || 'Horário não informado'}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {actions.length > 0 ? (
+                                                                actions.map((action, index) => (
+                                                                    <Button
+                                                                        key={index}
+                                                                        size="small"
+                                                                        variant="contained"
+                                                                        color={action.color}
+                                                                        onClick={() => handleActionClick(order.id, action.action, action.label)}
+                                                                        sx={{ ml: index > 0 ? 1 : 0 }}
+                                                                    >
+                                                                        {action.label}
+                                                                    </Button>
+                                                                ))
+                                                            ) : (
+                                                                <Button size="small" variant="outlined" disabled>
+                                                                    Nenhuma ação disponível
+                                                                </Button>
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })
                                         ) : (
                                             <TableRow>
                                                 <TableCell colSpan={6} align="center">
@@ -306,6 +456,24 @@ function Pedidos() {
                         )}
                     </Paper>
                 </Container>
+
+                {/* Confirmation Dialog */}
+                <Dialog open={confirmDialog.open} onClose={handleCloseDialog}>
+                    <DialogTitle>Confirmar Ação</DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            Tem certeza que deseja {confirmDialog.actionLabel?.toLowerCase()} este pedido?
+                        </DialogContentText>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleCloseDialog} color="primary">
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleConfirmAction} color="primary" variant="contained">
+                            Confirmar
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </Box>
         </Box>
     );
