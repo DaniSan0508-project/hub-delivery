@@ -39,6 +39,16 @@ import {
 
 const drawerWidth = 240;
 
+const daysOfWeekMap = {
+    MONDAY: 'Segunda-feira',
+    TUESDAY: 'Terça-feira',
+    WEDNESDAY: 'Quarta-feira',
+    THURSDAY: 'Quinta-feira',
+    FRIDAY: 'Sexta-feira',
+    SATURDAY: 'Sábado',
+    SUNDAY: 'Domingo'
+};
+
 function Dashboard() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -54,17 +64,15 @@ function Dashboard() {
         averageOrderValue: 0,
         completedOrders: 0
     });
+    const [openingHours, setOpeningHours] = useState([]);
+    const [openingHoursLoading, setOpeningHoursLoading] = useState(true);
 
     useEffect(() => {
-        // Check if user is logged in
         const token = localStorage.getItem('authToken');
         if (!token) {
             navigate('/');
         } else {
-            // In a real app, you might want to decode the token to get user info
             setUser({ name: 'Usuário' });
-
-            // Fetch merchant data and orders
             fetchDashboardData(token);
         }
     }, [navigate]);
@@ -76,12 +84,8 @@ function Dashboard() {
 
             // Fetch merchant data
             const merchantResponse = await fetch('http://localhost:8090/api/hub/ifood/merchant', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             });
-
             if (merchantResponse.ok) {
                 const merchantData = await merchantResponse.json();
                 setMerchantData(merchantData);
@@ -92,22 +96,29 @@ function Dashboard() {
 
             // Fetch orders data
             const ordersResponse = await fetch('http://localhost:8090/api/erp/orders', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             });
-
             if (ordersResponse.ok) {
                 const ordersData = await ordersResponse.json();
                 setOrders(ordersData.orders);
-
-                // Calculate sales metrics
                 calculateSalesMetrics(ordersData.orders);
             } else {
                 const errorData = await ordersResponse.json();
                 setError(prevError => prevError ? `${prevError}; ${errorData.message}` : errorData.message || 'Erro ao carregar pedidos');
             }
+
+            // Fetch opening hours data
+            const openingHoursResponse = await fetch('http://localhost:8090/api/hub/ifood/merchant/opening-hours', {
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+            if (openingHoursResponse.ok) {
+                const openingHoursData = await openingHoursResponse.json();
+                setOpeningHours(openingHoursData.shifts);
+            } else {
+                const errorData = await openingHoursResponse.json();
+                setError(prevError => prevError ? `${prevError}; ${errorData.message}` : errorData.message || 'Erro ao carregar horários de funcionamento');
+            }
+
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
             setError('Erro de conexão. Por favor, tente novamente.');
@@ -124,7 +135,6 @@ function Dashboard() {
         orders.forEach(order => {
             if (order.order.status === 'Concluded') {
                 completedOrders++;
-                // Calculate order total
                 const orderTotal = order.order.items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
                 totalSales += orderTotal;
             }
@@ -142,39 +152,25 @@ function Dashboard() {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'Placed':
-                return 'info';
-            case 'Confirmed':
-                return 'success';
-            case 'SPS':
-                return 'warning';
-            case 'SPE':
-                return 'info';
-            case 'Dispatched':
-                return 'default';
-            case 'Concluded':
-                return 'default';
-            default:
-                return 'default';
+            case 'Placed': return 'info';
+            case 'Confirmed': return 'success';
+            case 'SPS': return 'warning';
+            case 'SPE': return 'info';
+            case 'Dispatched': return 'default';
+            case 'Concluded': return 'default';
+            default: return 'default';
         }
     };
 
     const getStatusText = (status) => {
         switch (status) {
-            case 'Placed':
-                return 'Recebido';
-            case 'Confirmed':
-                return 'Confirmado';
-            case 'SPS':
-                return 'Separação iniciada';
-            case 'SPE':
-                return 'Separação finalizada';
-            case 'Dispatched':
-                return 'Despachado';
-            case 'Concluded':
-                return 'Concluído';
-            default:
-                return status;
+            case 'Placed': return 'Recebido';
+            case 'Confirmed': return 'Confirmado';
+            case 'SPS': return 'Separação iniciada';
+            case 'SPE': return 'Separação finalizada';
+            case 'Dispatched': return 'Despachado';
+            case 'Concluded': return 'Concluído';
+            default: return status;
         }
     };
 
@@ -196,7 +192,7 @@ function Dashboard() {
     ];
 
     if (!user) {
-        return null; // or a loading spinner
+        return null;
     }
 
     return (
@@ -228,9 +224,7 @@ function Dashboard() {
                     variant="temporary"
                     open={mobileOpen}
                     onClose={handleDrawerToggle}
-                    ModalProps={{
-                        keepMounted: true, // Better open performance on mobile.
-                    }}
+                    ModalProps={{ keepMounted: true }}
                     sx={{
                         display: { xs: 'block', sm: 'none' },
                         '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
@@ -248,9 +242,7 @@ function Dashboard() {
                                 }}
                                 selected={location.pathname === item.path}
                             >
-                                <ListItemIcon>
-                                    {item.icon}
-                                </ListItemIcon>
+                                <ListItemIcon>{item.icon}</ListItemIcon>
                                 <ListItemText primary={item.text} />
                             </ListItem>
                         ))}
@@ -274,9 +266,7 @@ function Dashboard() {
                                 onClick={() => navigate(item.path)}
                                 selected={location.pathname === item.path}
                             >
-                                <ListItemIcon>
-                                    {item.icon}
-                                </ListItemIcon>
+                                <ListItemIcon>{item.icon}</ListItemIcon>
                                 <ListItemText primary={item.text} />
                             </ListItem>
                         ))}
@@ -314,7 +304,6 @@ function Dashboard() {
                                 Resumo de Vendas
                             </Typography>
 
-                            {/* Sales Metrics Cards */}
                             <Grid container spacing={3} sx={{ mb: 4 }}>
                                 <Grid item xs={12} sm={6} md={3}>
                                     <Card>
@@ -366,9 +355,8 @@ function Dashboard() {
                                 </Grid>
                             </Grid>
 
-                            {/* Orders by Status */}
                             <Grid container spacing={3} sx={{ mb: 4 }}>
-                                <Grid item xs={12}>
+                                <Grid item xs={12} md={6}>
                                     <Paper elevation={3} sx={{ p: 3 }}>
                                         <Typography variant="h6" gutterBottom>
                                             Pedidos por Status
@@ -388,6 +376,40 @@ function Dashboard() {
                                                 </Grid>
                                             ))}
                                         </Grid>
+                                    </Paper>
+                                </Grid>
+
+                                <Grid item xs={12} md={6}>
+                                    <Paper elevation={3} sx={{ p: 3 }}>
+                                        <Typography variant="h6" gutterBottom>
+                                            Horários de Funcionamento
+                                        </Typography>
+                                        {openingHours.length > 0 ? (
+                                            <Table size="small">
+                                                <TableHead>
+                                                    <TableRow>
+                                                        <TableCell>Dia</TableCell>
+                                                        <TableCell align="right">Horário</TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {openingHours.map((shift, index) => (
+                                                        <TableRow key={index}>
+                                                            <TableCell component="th" scope="row">
+                                                                {daysOfWeekMap[shift.dayOfWeek]}
+                                                            </TableCell>
+                                                            <TableCell align="right">
+                                                                {`${shift.start.substring(0, 5)} - ${shift.end.substring(0, 5)}`}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        ) : (
+                                            <Alert severity="info" sx={{ mt: 2 }}>
+                                                Nenhum horário de funcionamento configurado.
+                                            </Alert>
+                                        )}
                                     </Paper>
                                 </Grid>
                             </Grid>
