@@ -65,7 +65,7 @@ function Dashboard() {
         completedOrders: 0
     });
     const [openingHours, setOpeningHours] = useState([]);
-    const [openingHoursLoading, setOpeningHoursLoading] = useState(true);
+    const [interruptions, setInterruptions] = useState([]);
 
     useEffect(() => {
         const token = localStorage.getItem('authToken');
@@ -117,6 +117,18 @@ function Dashboard() {
             } else {
                 const errorData = await openingHoursResponse.json();
                 setError(prevError => prevError ? `${prevError}; ${errorData.message}` : errorData.message || 'Erro ao carregar horários de funcionamento');
+            }
+
+            // Fetch interruptions data
+            const interruptionsResponse = await fetch('http://localhost:8090/api/hub/ifood/merchant/interruptions', {
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+            if (interruptionsResponse.ok) {
+                const interruptionsData = await interruptionsResponse.json();
+                setInterruptions(interruptionsData);
+            } else {
+                const errorData = await interruptionsResponse.json();
+                setError(prevError => prevError ? `${prevError}; ${errorData.message}` : errorData.message || 'Erro ao carregar interrupções');
             }
 
         } catch (error) {
@@ -408,6 +420,50 @@ function Dashboard() {
                                         ) : (
                                             <Alert severity="info" sx={{ mt: 2 }}>
                                                 Nenhum horário de funcionamento configurado.
+                                            </Alert>
+                                        )}
+                                    </Paper>
+                                </Grid>
+                            </Grid>
+
+                            {/* Interrupções de Loja */}
+                            <Grid container spacing={3}>
+                                <Grid item xs={12}>
+                                    <Paper elevation={3} sx={{ p: 3 }}>
+                                        <Typography variant="h6" gutterBottom>
+                                            Interrupções Agendadas
+                                        </Typography>
+                                        <Alert severity="info" sx={{ mb: 2 }}>
+                                            As interrupções podem levar até 2 minutos para serem atualizadas no iFood.
+                                        </Alert>
+                                        {interruptions.length > 0 ? (
+                                            <Table size="small">
+                                                <TableHead>
+                                                    <TableRow>
+                                                        <TableCell>Descrição</TableCell>
+                                                        <TableCell align="center">Início</TableCell>
+                                                        <TableCell align="center">Fim</TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {interruptions.map((interruption) => (
+                                                        <TableRow key={interruption.id}>
+                                                            <TableCell component="th" scope="row">
+                                                                {interruption.description}
+                                                            </TableCell>
+                                                            <TableCell align="center">
+                                                                {new Date(interruption.start).toLocaleString()}
+                                                            </TableCell>
+                                                            <TableCell align="center">
+                                                                {new Date(interruption.end).toLocaleString()}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        ) : (
+                                            <Alert severity="info" sx={{ mt: 2 }}>
+                                                Nenhuma interrupção agendada.
                                             </Alert>
                                         )}
                                     </Paper>

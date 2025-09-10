@@ -40,13 +40,13 @@ import {
 const drawerWidth = 240;
 
 const daysOfWeek = [
-    { label: 'Segunda-feira', value: 1 },
-    { label: 'Terça-feira', value: 2 },
-    { label: 'Quarta-feira', value: 3 },
-    { label: 'Quinta-feira', value: 4 },
-    { label: 'Sexta-feira', value: 5 },
-    { label: 'Sábado', value: 6 },
-    { label: 'Domingo', value: 7 },
+    { label: 'Domingo', value: 1, apiValue: 'SUNDAY' },
+    { label: 'Segunda-feira', value: 2, apiValue: 'MONDAY' },
+    { label: 'Terça-feira', value: 3, apiValue: 'TUESDAY' },
+    { label: 'Quarta-feira', value: 4, apiValue: 'WEDNESDAY' },
+    { label: 'Quinta-feira', value: 5, apiValue: 'THURSDAY' },
+    { label: 'Sexta-feira', value: 6, apiValue: 'FRIDAY' },
+    { label: 'Sábado', value: 7, apiValue: 'SATURDAY' },
 ];
 
 function Loja() {
@@ -66,16 +66,22 @@ function Loja() {
     const [interruptionMessage, setInterruptionMessage] = useState(null);
     const [interruptionsList, setInterruptionsList] = useState([]);
     const [interruptionsLoading, setInterruptionsLoading] = useState(false);
+
     const [openingHoursData, setOpeningHoursData] = useState(
         daysOfWeek.map(day => ({
-            dayOfWeek: day.value,
+            ...day,
             checked: false,
             start: '',
             end: ''
         }))
     );
+
     const [openingHoursLoading, setOpeningHoursLoading] = useState(false);
     const [openingHoursMessage, setOpeningHoursMessage] = useState(null);
+    const [currentStoreStatus, setCurrentStoreStatus] = useState(null);
+    const [storeStatusLoading, setStoreStatusLoading] = useState(false);
+    const [storeStatusMessage, setStoreStatusMessage] = useState(null);
+
 
     useEffect(() => {
         const token = localStorage.getItem('authToken');
@@ -85,8 +91,8 @@ function Loja() {
             setUser({ name: 'Usuário' });
             fetchMerchantStatus(token);
             fetchInterruptions(token);
-            // Poderia ter uma chamada para carregar os horários atuais aqui, se a API suportar
-            // fetchOpeningHours(token);
+            fetchOpeningHours(token);
+            fetchStoreStatus(token);
         }
     }, [navigate]);
 
@@ -115,6 +121,56 @@ function Loja() {
         }
     };
 
+    const fetchStoreStatus = async (token) => {
+        try {
+            setStoreStatusLoading(true);
+            const response = await fetch('http://localhost:8090/api/hub/ifood/merchant/status', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setCurrentStoreStatus(data.status);
+            } else {
+                const errorData = await response.json();
+                setStoreStatusMessage({ severity: 'error', message: errorData.message || 'Erro ao carregar o status da loja.' });
+            }
+        } catch (error) {
+            console.error('Error fetching store status:', error);
+            setStoreStatusMessage({ severity: 'error', message: 'Erro de conexão ao carregar o status da loja.' });
+        } finally {
+            setStoreStatusLoading(false);
+        }
+    };
+
+    const handleUpdateStoreStatus = async (status) => {
+        try {
+            setStoreStatusLoading(true);
+            setStoreStatusMessage(null);
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('http://localhost:8090/api/hub/ifood/merchant/status', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status })
+            });
+
+            if (response.ok) {
+                setStoreStatusMessage({ severity: 'success', message: `Status da loja alterado para ${status} com sucesso!` });
+                setCurrentStoreStatus(status);
+            } else {
+                const errorData = await response.json();
+                setStoreStatusMessage({ severity: 'error', message: errorData.message || 'Erro ao atualizar o status da loja.' });
+            }
+        } catch (error) {
+            console.error('Error updating store status:', error);
+            setStoreStatusMessage({ severity: 'error', message: 'Erro de conexão. Não foi possível atualizar o status.' });
+        } finally {
+            setStoreStatusLoading(false);
+        }
+    };
+
     const fetchInterruptions = async (token) => {
         try {
             setInterruptionsLoading(true);
@@ -140,6 +196,41 @@ function Loja() {
         }
     };
 
+    const fetchOpeningHours = async (token) => {
+        try {
+            setOpeningHoursLoading(true);
+            const response = await fetch('http://localhost:8090/api/hub/ifood/merchant/opening-hours', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const apiShifts = data.shifts;
+
+                const updatedOpeningHours = daysOfWeek.map(day => {
+                    const shift = apiShifts.find(s => s.dayOfWeek === day.apiValue);
+                    return {
+                        ...day,
+                        checked: !!shift,
+                        start: shift ? shift.start.substring(0, 5) : '',
+                        end: shift ? shift.end.substring(0, 5) : ''
+                    };
+                });
+                setOpeningHoursData(updatedOpeningHours);
+            } else {
+                console.error('Erro ao carregar horários de funcionamento.');
+            }
+        } catch (error) {
+            console.error('Erro de conexão ao carregar horários:', error);
+        } finally {
+            setOpeningHoursLoading(false);
+        }
+    };
+
+
     const handleCreateInterruption = async () => {
         try {
             setInterruptionLoading(true);
@@ -163,9 +254,22 @@ function Loja() {
                 fetchInterruptions(token);
             } else {
                 const errorData = await response.json();
+
+                let errorMessage = 'Erro ao criar interrupção de loja.';
+                if (errorData.message) {
+                    errorMessage = errorData.message;
+                }
+
+                if (errorData.errors && typeof errorData.errors === 'object') {
+                    const validationErrors = Object.values(errorData.errors).flat();
+                    if (validationErrors.length > 0) {
+                        errorMessage = validationErrors.join(', ');
+                    }
+                }
+
                 setInterruptionMessage({
                     severity: 'error',
-                    message: errorData.message || 'Erro ao criar interrupção de loja.'
+                    message: errorMessage
                 });
             }
         } catch (error) {
@@ -197,9 +301,19 @@ function Loja() {
                 fetchInterruptions(token);
             } else {
                 const errorData = await response.json();
+                let errorMessage = 'Erro ao excluir interrupção.';
+                if (errorData.message) {
+                    errorMessage = errorData.message;
+                }
+                if (errorData.errors && typeof errorData.errors === 'object') {
+                    const validationErrors = Object.values(errorData.errors).flat();
+                    if (validationErrors.length > 0) {
+                        errorMessage = validationErrors.join(', ');
+                    }
+                }
                 setInterruptionMessage({
                     severity: 'error',
-                    message: errorData.message || 'Erro ao excluir interrupção.'
+                    message: errorMessage
                 });
             }
         } catch (error) {
@@ -219,7 +333,7 @@ function Loja() {
             const shifts = openingHoursData
                 .filter(day => day.checked)
                 .map(day => ({
-                    dayOfWeek: day.dayOfWeek,
+                    dayOfWeek: day.value,
                     start: day.start + ':00',
                     end: day.end + ':00'
                 }));
@@ -241,9 +355,22 @@ function Loja() {
                 });
             } else {
                 const errorData = await response.json();
+
+                let errorMessage = 'Erro ao atualizar horários.';
+                if (errorData.message) {
+                    errorMessage = errorData.message;
+                }
+
+                if (errorData.errors && typeof errorData.errors === 'object') {
+                    const validationErrors = Object.values(errorData.errors).flat();
+                    if (validationErrors.length > 0) {
+                        errorMessage = validationErrors.join(', ');
+                    }
+                }
+
                 setOpeningHoursMessage({
                     severity: 'error',
-                    message: errorData.message || 'Erro ao atualizar horários.'
+                    message: errorMessage
                 });
             }
         } catch (error) {
@@ -454,55 +581,64 @@ function Loja() {
                                     </CardContent>
                                 </Card>
 
+
                                 {/* Horários de Funcionamento */}
                                 <Card variant="outlined" sx={{ mb: 3 }}>
                                     <CardContent>
                                         <Typography variant="subtitle1" gutterBottom>
                                             Horários de Funcionamento
                                         </Typography>
-                                        <Grid container spacing={2} alignItems="center">
-                                            {openingHoursData.map((day, index) => (
-                                                <Grid item xs={12} key={day.dayOfWeek}>
-                                                    <Grid container spacing={2} alignItems="center">
-                                                        <Grid item xs={12} sm={4}>
-                                                            <FormControlLabel
-                                                                control={
-                                                                    <Checkbox
-                                                                        checked={day.checked}
-                                                                        onChange={(e) => handleOpeningHoursFormChange(index, 'checked', e.target.checked)}
+                                        {openingHoursLoading ? (
+                                            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                                                <CircularProgress />
+                                            </Box>
+                                        ) : (
+                                            <Grid container spacing={2} alignItems="center">
+                                                {openingHoursData.map((day, index) => {
+                                                    return (
+                                                        <Grid item xs={12} key={day.value}>
+                                                            <Grid container spacing={2} alignItems="center">
+                                                                <Grid item xs={12} sm={4}>
+                                                                    <FormControlLabel
+                                                                        control={
+                                                                            <Checkbox
+                                                                                checked={day.checked}
+                                                                                onChange={(e) => handleOpeningHoursFormChange(index, 'checked', e.target.checked)}
+                                                                            />
+                                                                        }
+                                                                        label={day.label}
                                                                     />
-                                                                }
-                                                                label={daysOfWeek.find(d => d.value === day.dayOfWeek).label}
-                                                            />
+                                                                </Grid>
+                                                                <Grid item xs={6} sm={4}>
+                                                                    <TextField
+                                                                        fullWidth
+                                                                        label="Início"
+                                                                        type="time"
+                                                                        value={day.start}
+                                                                        onChange={(e) => handleOpeningHoursFormChange(index, 'start', e.target.value)}
+                                                                        disabled={!day.checked}
+                                                                        InputLabelProps={{ shrink: true }}
+                                                                        size="small"
+                                                                    />
+                                                                </Grid>
+                                                                <Grid item xs={6} sm={4}>
+                                                                    <TextField
+                                                                        fullWidth
+                                                                        label="Fim"
+                                                                        type="time"
+                                                                        value={day.end}
+                                                                        onChange={(e) => handleOpeningHoursFormChange(index, 'end', e.target.value)}
+                                                                        disabled={!day.checked}
+                                                                        InputLabelProps={{ shrink: true }}
+                                                                        size="small"
+                                                                    />
+                                                                </Grid>
+                                                            </Grid>
                                                         </Grid>
-                                                        <Grid item xs={6} sm={4}>
-                                                            <TextField
-                                                                fullWidth
-                                                                label="Início"
-                                                                type="time"
-                                                                value={day.start}
-                                                                onChange={(e) => handleOpeningHoursFormChange(index, 'start', e.target.value)}
-                                                                disabled={!day.checked}
-                                                                InputLabelProps={{ shrink: true }}
-                                                                size="small"
-                                                            />
-                                                        </Grid>
-                                                        <Grid item xs={6} sm={4}>
-                                                            <TextField
-                                                                fullWidth
-                                                                label="Fim"
-                                                                type="time"
-                                                                value={day.end}
-                                                                onChange={(e) => handleOpeningHoursFormChange(index, 'end', e.target.value)}
-                                                                disabled={!day.checked}
-                                                                InputLabelProps={{ shrink: true }}
-                                                                size="small"
-                                                            />
-                                                        </Grid>
-                                                    </Grid>
-                                                </Grid>
-                                            ))}
-                                        </Grid>
+                                                    );
+                                                })}
+                                            </Grid>
+                                        )}
                                         <Box sx={{ mt: 2, textAlign: 'right' }}>
                                             <Button
                                                 variant="contained"
@@ -581,53 +717,6 @@ function Loja() {
                                         {interruptionMessage && (
                                             <Alert severity={interruptionMessage.severity} sx={{ mt: 2 }}>
                                                 {interruptionMessage.message}
-                                            </Alert>
-                                        )}
-                                    </CardContent>
-                                </Card>
-
-                                {/* Lista de Interrupções Agendadas */}
-                                <Card variant="outlined">
-                                    <CardContent>
-                                        <Typography variant="subtitle1" gutterBottom>
-                                            Interrupções Agendadas
-                                        </Typography>
-                                        {interruptionsLoading ? (
-                                            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                                                <CircularProgress />
-                                            </Box>
-                                        ) : interruptionsList.length > 0 ? (
-                                            <Grid container spacing={2}>
-                                                {interruptionsList.map((interruption) => (
-                                                    <Grid item xs={12} key={interruption.id}>
-                                                        <Card variant="outlined">
-                                                            <CardContent>
-                                                                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                                                                    {interruption.description}
-                                                                </Typography>
-                                                                <Typography variant="body2" color="textSecondary">
-                                                                    **Início:** {new Date(interruption.start).toLocaleString()}
-                                                                </Typography>
-                                                                <Typography variant="body2" color="textSecondary">
-                                                                    **Fim:** {new Date(interruption.end).toLocaleString()}
-                                                                </Typography>
-                                                            </CardContent>
-                                                            <CardActions sx={{ justifyContent: 'flex-end' }}>
-                                                                <IconButton
-                                                                    aria-label="excluir"
-                                                                    color="error"
-                                                                    onClick={() => handleDeleteInterruption(interruption.id)}
-                                                                >
-                                                                    <DeleteIcon />
-                                                                </IconButton>
-                                                            </CardActions>
-                                                        </Card>
-                                                    </Grid>
-                                                ))}
-                                            </Grid>
-                                        ) : (
-                                            <Alert severity="info">
-                                                Nenhuma interrupção agendada.
                                             </Alert>
                                         )}
                                     </CardContent>
