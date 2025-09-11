@@ -27,7 +27,8 @@ import {
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu as MenuIcon } from '@mui/icons-material';
-import Sidebar from './Sidebar';
+import Sidebar from '../../components/Sidebar';
+import orderService from '../../services/orderService';
 
 const drawerWidth = 240;
 
@@ -42,16 +43,30 @@ function Pedidos() {
     const [confirmDialog, setConfirmDialog] = useState({ open: false, orderId: null, action: null, actionLabel: '' });
 
     useEffect(() => {
+        let isMounted = true;
+        
         // Check if user is logged in
         const token = localStorage.getItem('authToken');
         if (!token) {
-            navigate('/');
+            if (isMounted) {
+                navigate('/');
+            }
         } else {
             // In a real app, you might want to decode the token to get user info
-            setUser({ name: 'Usuário' });
-            // Fetch orders from API
-            fetchOrders(token);
+            if (isMounted) {
+                setUser({ name: 'Usuário' });
+                // Adicionar um pequeno atraso para evitar corrida com outras chamadas
+                setTimeout(() => {
+                    if (isMounted) {
+                        fetchOrders(token);
+                    }
+                }, 150);
+            }
         }
+        
+        return () => {
+            isMounted = false;
+        };
     }, [navigate]);
 
     const fetchOrders = async (token) => {
@@ -59,31 +74,20 @@ function Pedidos() {
             setLoading(true);
             setError(null);
 
-            const response = await fetch('http://localhost:8090/api/erp/orders', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                // Transform the API response to match our table structure
-                const transformedOrders = data.orders.map(order => ({
-                    id: order.order.id,
-                    customer: order.consumer.name,
-                    status: order.order.status || 'CONFIRMED', // Default to 'CONFIRMED' if status is not provided
-                    total: order.order.items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0),
-                    createdAt: 'Horário não disponível' // API doesn't provide this yet
-                }));
-                setOrders(transformedOrders);
-            } else {
-                const errorData = await response.json();
-                setError(errorData.message || 'Erro ao carregar pedidos');
-            }
+            const ordersData = await orderService.getOrders(token);
+            
+            // Transform the API response to match our table structure
+            const transformedOrders = ordersData.orders.map(order => ({
+                id: order.order.id,
+                customer: order.consumer.name,
+                status: order.order.status || 'CONFIRMED', // Default to 'CONFIRMED' if status is not provided
+                total: order.order.items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0),
+                createdAt: 'Horário não disponível' // API doesn't provide this yet
+            }));
+            setOrders(transformedOrders);
         } catch (error) {
             console.error('Error fetching orders:', error);
-            setError('Erro de conexão. Por favor, tente novamente.');
+            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
         } finally {
             setLoading(false);
         }
@@ -92,73 +96,36 @@ function Pedidos() {
     const updateOrderStatus = async (orderId, status) => {
         try {
             const token = localStorage.getItem('authToken');
-            const response = await fetch(`http://localhost:8090/api/orders/${orderId}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ status })
-            });
-
-            if (response.ok) {
-                // Refresh orders after status update
-                fetchOrders(token);
-            } else {
-                const errorData = await response.json();
-                setError(errorData.message || 'Erro ao atualizar status do pedido');
-            }
+            await orderService.updateOrderStatus(orderId, status, token);
+            // Refresh orders after status update
+            fetchOrders(token);
         } catch (error) {
             console.error('Error updating order status:', error);
-            setError('Erro de conexão. Por favor, tente novamente.');
+            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
         }
     };
 
     const startSeparation = async (orderId) => {
         try {
             const token = localStorage.getItem('authToken');
-            const response = await fetch(`http://localhost:8090/api/orders/${orderId}/start-separation`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                // Refresh orders after starting separation
-                fetchOrders(token);
-            } else {
-                const errorData = await response.json();
-                setError(errorData.message || 'Erro ao iniciar separação do pedido');
-            }
+            await orderService.startSeparation(orderId, token);
+            // Refresh orders after starting separation
+            fetchOrders(token);
         } catch (error) {
             console.error('Error starting separation:', error);
-            setError('Erro de conexão. Por favor, tente novamente.');
+            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
         }
     };
 
     const endSeparation = async (orderId) => {
         try {
             const token = localStorage.getItem('authToken');
-            const response = await fetch(`http://localhost:8090/api/orders/${orderId}/end-separation`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                // Refresh orders after ending separation
-                fetchOrders(token);
-            } else {
-                const errorData = await response.json();
-                setError(errorData.message || 'Erro ao finalizar separação do pedido');
-            }
+            await orderService.endSeparation(orderId, token);
+            // Refresh orders after ending separation
+            fetchOrders(token);
         } catch (error) {
             console.error('Error ending separation:', error);
-            setError('Erro de conexão. Por favor, tente novamente.');
+            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
         }
     };
 
@@ -326,7 +293,12 @@ function Pedidos() {
                             <Typography variant="h6">
                                 Pedidos Recentes
                             </Typography>
-                            <Button variant="contained" onClick={() => fetchOrders(localStorage.getItem('authToken'))}>
+                            <Button variant="contained" onClick={() => {
+                                const token = localStorage.getItem('authToken');
+                                if (token) {
+                                    fetchOrders(token);
+                                }
+                            }}>
                                 Atualizar
                             </Button>
                         </Box>

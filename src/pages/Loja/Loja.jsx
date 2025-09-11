@@ -24,7 +24,8 @@ import {
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu as MenuIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import Sidebar from './Sidebar';
+import Sidebar from '../../components/Sidebar';
+import storeService from '../../services/storeService';
 
 const drawerWidth = 240;
 
@@ -73,38 +74,41 @@ function Loja() {
 
 
     useEffect(() => {
+        let isMounted = true;
+        
         const token = localStorage.getItem('authToken');
         if (!token) {
-            navigate('/');
+            if (isMounted) {
+                navigate('/');
+            }
         } else {
-            setUser({ name: 'Usuário' });
-            fetchMerchantStatus(token);
-            fetchInterruptions(token);
-            fetchOpeningHours(token);
-            fetchStoreStatus(token);
+            if (isMounted) {
+                setUser({ name: 'Usuário' });
+                // Adicionar um pequeno atraso para evitar corrida com outras chamadas
+                setTimeout(() => {
+                    if (isMounted) {
+                        fetchMerchantStatus(token);
+                        fetchInterruptions(token);
+                        fetchOpeningHours(token);
+                        fetchStoreStatus(token);
+                    }
+                }, 300);
+            }
         }
+        
+        return () => {
+            isMounted = false;
+        };
     }, [navigate]);
 
     const fetchMerchantStatus = async (token) => {
         try {
             setStatusLoading(true);
-            const response = await fetch('http://localhost:8090/api/hub/ifood/merchant/status', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setMerchantStatus(data);
-            } else {
-                const errorData = await response.json();
-                setError(errorData.message || 'Erro ao carregar status do merchant');
-            }
+            const merchantStatus = await storeService.getMerchantStatus(token);
+            setMerchantStatus(merchantStatus);
         } catch (error) {
             console.error('Error fetching merchant status:', error);
-            setError('Erro de conexão ao carregar status do merchant');
+            setError(error.message || 'Erro de conexão ao carregar status do merchant');
         } finally {
             setStatusLoading(false);
         }
@@ -113,19 +117,11 @@ function Loja() {
     const fetchStoreStatus = async (token) => {
         try {
             setStoreStatusLoading(true);
-            const response = await fetch('http://localhost:8090/api/hub/ifood/merchant/status', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setCurrentStoreStatus(data.status);
-            } else {
-                const errorData = await response.json();
-                setStoreStatusMessage({ severity: 'error', message: errorData.message || 'Erro ao carregar o status da loja.' });
-            }
+            const storeStatus = await storeService.getMerchantStatus(token);
+            setCurrentStoreStatus(storeStatus.status);
         } catch (error) {
             console.error('Error fetching store status:', error);
-            setStoreStatusMessage({ severity: 'error', message: 'Erro de conexão ao carregar o status da loja.' });
+            setStoreStatusMessage({ severity: 'error', message: error.message || 'Erro de conexão ao carregar o status da loja.' });
         } finally {
             setStoreStatusLoading(false);
         }
@@ -136,25 +132,13 @@ function Loja() {
             setStoreStatusLoading(true);
             setStoreStatusMessage(null);
             const token = localStorage.getItem('authToken');
-            const response = await fetch('http://localhost:8090/api/hub/ifood/merchant/status', {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ status })
-            });
+            const response = await storeService.updateStoreStatus(status, token);
 
-            if (response.ok) {
-                setStoreStatusMessage({ severity: 'success', message: `Status da loja alterado para ${status} com sucesso!` });
-                setCurrentStoreStatus(status);
-            } else {
-                const errorData = await response.json();
-                setStoreStatusMessage({ severity: 'error', message: errorData.message || 'Erro ao atualizar o status da loja.' });
-            }
+            setStoreStatusMessage({ severity: 'success', message: `Status da loja alterado para ${status} com sucesso!` });
+            setCurrentStoreStatus(status);
         } catch (error) {
             console.error('Error updating store status:', error);
-            setStoreStatusMessage({ severity: 'error', message: 'Erro de conexão. Não foi possível atualizar o status.' });
+            setStoreStatusMessage({ severity: 'error', message: error.message || 'Erro de conexão. Não foi possível atualizar o status.' });
         } finally {
             setStoreStatusLoading(false);
         }
@@ -163,23 +147,11 @@ function Loja() {
     const fetchInterruptions = async (token) => {
         try {
             setInterruptionsLoading(true);
-            const response = await fetch('http://localhost:8090/api/hub/ifood/merchant/interruptions', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setInterruptionsList(data);
-            } else {
-                const errorData = await response.json();
-                setError(errorData.message || 'Erro ao carregar lista de interrupções.');
-            }
+            const interruptions = await storeService.getInterruptions(token);
+            setInterruptionsList(interruptions);
         } catch (error) {
             console.error('Error fetching interruptions:', error);
-            setError('Erro de conexão ao carregar interrupções.');
+            setError(error.message || 'Erro de conexão ao carregar interrupções.');
         } finally {
             setInterruptionsLoading(false);
         }
@@ -188,30 +160,19 @@ function Loja() {
     const fetchOpeningHours = async (token) => {
         try {
             setOpeningHoursLoading(true);
-            const response = await fetch('http://localhost:8090/api/hub/ifood/merchant/opening-hours', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+            const openingHours = await storeService.getOpeningHours(token);
+            const apiShifts = openingHours.shifts;
+
+            const updatedOpeningHours = daysOfWeek.map(day => {
+                const shift = apiShifts.find(s => s.dayOfWeek === day.apiValue);
+                return {
+                    ...day,
+                    checked: !!shift,
+                    start: shift ? shift.start.substring(0, 5) : '',
+                    end: shift ? shift.end.substring(0, 5) : ''
+                };
             });
-
-            if (response.ok) {
-                const data = await response.json();
-                const apiShifts = data.shifts;
-
-                const updatedOpeningHours = daysOfWeek.map(day => {
-                    const shift = apiShifts.find(s => s.dayOfWeek === day.apiValue);
-                    return {
-                        ...day,
-                        checked: !!shift,
-                        start: shift ? shift.start.substring(0, 5) : '',
-                        end: shift ? shift.end.substring(0, 5) : ''
-                    };
-                });
-                setOpeningHoursData(updatedOpeningHours);
-            } else {
-                console.error('Erro ao carregar horários de funcionamento.');
-            }
+            setOpeningHoursData(updatedOpeningHours);
         } catch (error) {
             console.error('Erro de conexão ao carregar horários:', error);
         } finally {
@@ -226,46 +187,20 @@ function Loja() {
             setInterruptionMessage(null);
 
             const token = localStorage.getItem('authToken');
-            const response = await fetch('http://localhost:8090/api/hub/ifood/merchant/interruptions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(interruptionData)
+            const response = await storeService.createInterruption(interruptionData, token);
+
+            setInterruptionMessage({
+                severity: 'success',
+                message: 'Interrupção de loja criada com sucesso!'
             });
-
-            if (response.ok) {
-                setInterruptionMessage({
-                    severity: 'success',
-                    message: 'Interrupção de loja criada com sucesso!'
-                });
-                fetchInterruptions(token);
-            } else {
-                const errorData = await response.json();
-
-                let errorMessage = 'Erro ao criar interrupção de loja.';
-                if (errorData.message) {
-                    errorMessage = errorData.message;
-                }
-
-                if (errorData.errors && typeof errorData.errors === 'object') {
-                    const validationErrors = Object.values(errorData.errors).flat();
-                    if (validationErrors.length > 0) {
-                        errorMessage = validationErrors.join(', ');
-                    }
-                }
-
-                setInterruptionMessage({
-                    severity: 'error',
-                    message: errorMessage
-                });
-            }
+            fetchInterruptions(token);
         } catch (error) {
             console.error('Error creating interruption:', error);
+            
+            let errorMessage = error.message || 'Erro de conexão. Não foi possível criar a interrupção.';
             setInterruptionMessage({
                 severity: 'error',
-                message: 'Erro de conexão. Não foi possível criar a interrupção.'
+                message: errorMessage
             });
         } finally {
             setInterruptionLoading(false);
@@ -275,41 +210,20 @@ function Loja() {
     const handleDeleteInterruption = async (id) => {
         try {
             const token = localStorage.getItem('authToken');
-            const response = await fetch(`http://localhost:8090/api/hub/ifood/merchant/interruptions/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                }
-            });
+            await storeService.deleteInterruption(id, token);
 
-            if (response.ok) {
-                setInterruptionMessage({
-                    severity: 'success',
-                    message: 'Interrupção de loja excluída com sucesso!'
-                });
-                fetchInterruptions(token);
-            } else {
-                const errorData = await response.json();
-                let errorMessage = 'Erro ao excluir interrupção.';
-                if (errorData.message) {
-                    errorMessage = errorData.message;
-                }
-                if (errorData.errors && typeof errorData.errors === 'object') {
-                    const validationErrors = Object.values(errorData.errors).flat();
-                    if (validationErrors.length > 0) {
-                        errorMessage = validationErrors.join(', ');
-                    }
-                }
-                setInterruptionMessage({
-                    severity: 'error',
-                    message: errorMessage
-                });
-            }
+            setInterruptionMessage({
+                severity: 'success',
+                message: 'Interrupção de loja excluída com sucesso!'
+            });
+            fetchInterruptions(token);
         } catch (error) {
             console.error('Error deleting interruption:', error);
+            
+            let errorMessage = error.message || 'Erro de conexão. Não foi possível excluir a interrupção.';
             setInterruptionMessage({
                 severity: 'error',
-                message: 'Erro de conexão. Não foi possível excluir a interrupção.'
+                message: errorMessage
             });
         }
     };
@@ -328,45 +242,19 @@ function Loja() {
                 }));
 
             const token = localStorage.getItem('authToken');
-            const response = await fetch('http://localhost:8090/api/hub/ifood/merchant/opening-hours', {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ shifts })
+            await storeService.updateOpeningHours(shifts, token);
+
+            setOpeningHoursMessage({
+                severity: 'success',
+                message: 'Horários de funcionamento atualizados com sucesso!'
             });
-
-            if (response.ok) {
-                setOpeningHoursMessage({
-                    severity: 'success',
-                    message: 'Horários de funcionamento atualizados com sucesso!'
-                });
-            } else {
-                const errorData = await response.json();
-
-                let errorMessage = 'Erro ao atualizar horários.';
-                if (errorData.message) {
-                    errorMessage = errorData.message;
-                }
-
-                if (errorData.errors && typeof errorData.errors === 'object') {
-                    const validationErrors = Object.values(errorData.errors).flat();
-                    if (validationErrors.length > 0) {
-                        errorMessage = validationErrors.join(', ');
-                    }
-                }
-
-                setOpeningHoursMessage({
-                    severity: 'error',
-                    message: errorMessage
-                });
-            }
         } catch (error) {
             console.error('Error updating opening hours:', error);
+            
+            let errorMessage = error.message || 'Erro de conexão. Não foi possível atualizar os horários.';
             setOpeningHoursMessage({
                 severity: 'error',
-                message: 'Erro de conexão. Não foi possível atualizar os horários.'
+                message: errorMessage
             });
         } finally {
             setOpeningHoursLoading(false);

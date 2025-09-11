@@ -27,7 +27,8 @@ import {
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu as MenuIcon } from '@mui/icons-material';
-import Sidebar from './Sidebar';
+import Sidebar from '../../components/Sidebar';
+import productService from '../../services/productService';
 
 const drawerWidth = 240;
 
@@ -52,16 +53,30 @@ function Sincronizacao() {
     });
 
     useEffect(() => {
+        let isMounted = true;
+        
         // Check if user is logged in
         const token = localStorage.getItem('authToken');
         if (!token) {
-            navigate('/');
+            if (isMounted) {
+                navigate('/');
+            }
         } else {
             // In a real app, you might want to decode the token to get user info
-            setUser({ name: 'Usuário' });
-            // Fetch sync data from API
-            fetchSyncData(token);
+            if (isMounted) {
+                setUser({ name: 'Usuário' });
+                // Adicionar um pequeno atraso para evitar corrida com outras chamadas
+                setTimeout(() => {
+                    if (isMounted) {
+                        fetchSyncData(token);
+                    }
+                }, 250);
+            }
         }
+        
+        return () => {
+            isMounted = false;
+        };
     }, [navigate]);
 
     const fetchSyncData = async (token) => {
@@ -156,26 +171,15 @@ function Sincronizacao() {
             setError(null);
 
             const token = localStorage.getItem('authToken');
-            const response = await fetch('http://localhost:8090/api/erp/products/sync', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ products: productsToSync })
-            });
+            const response = await productService.syncProducts(productsToSync, token);
 
-            if (response.ok) {
-                setSuccessMessage(`Produtos sincronizados com sucesso! ${productsToSync.length} produtos enviados.`);
-                setProductsToSync([]);
-                // Refresh sync data
-            } else {
-                const errorData = await response.json();
-                setError(errorData.message || 'Erro ao sincronizar produtos');
-            }
+            setSuccessMessage(`Produtos sincronizados com sucesso! ${productsToSync.length} produtos enviados.`);
+            setProductsToSync([]);
+            // Refresh sync data
+            fetchSyncData(token);
         } catch (error) {
             console.error('Error syncing products:', error);
-            setError('Erro de conexão. Por favor, tente novamente.');
+            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
         } finally {
             setLoading(false);
         }

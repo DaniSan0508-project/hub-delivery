@@ -24,7 +24,9 @@ import {
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu as MenuIcon } from '@mui/icons-material';
-import Sidebar from './Sidebar';
+import Sidebar from '../../components/Sidebar';
+import dashboardService from '../../services/dashboardService';
+import { useAsync } from '../../hooks/useAsync';
 
 const drawerWidth = 240;
 
@@ -57,13 +59,28 @@ function Dashboard() {
     const [interruptions, setInterruptions] = useState([]);
 
     useEffect(() => {
+        let isMounted = true;
+        
         const token = localStorage.getItem('authToken');
         if (!token) {
-            navigate('/');
+            if (isMounted) {
+                navigate('/');
+            }
         } else {
-            setUser({ name: 'Usuário' });
-            fetchDashboardData(token);
+            if (isMounted) {
+                setUser({ name: 'Usuário' });
+                // Adicionar um pequeno atraso para evitar corrida com outras chamadas
+                setTimeout(() => {
+                    if (isMounted) {
+                        fetchDashboardData(token);
+                    }
+                }, 100);
+            }
         }
+        
+        return () => {
+            isMounted = false;
+        };
     }, [navigate]);
 
     const fetchDashboardData = async (token) => {
@@ -71,58 +88,23 @@ function Dashboard() {
             setLoading(true);
             setError(null);
 
-            // Fetch merchant data
-            const merchantResponse = await fetch('http://localhost:8090/api/hub/ifood/merchant', {
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-            });
-            if (merchantResponse.ok) {
-                const merchantData = await merchantResponse.json();
-                setMerchantData(merchantData);
-            } else {
-                const errorData = await merchantResponse.json();
-                setError(errorData.message || 'Erro ao carregar dados do merchant');
-            }
+            // Fetch all data in parallel
+            const [merchantData, ordersData, openingHoursData, interruptionsData] = await Promise.all([
+                dashboardService.getMerchantData(token),
+                dashboardService.getOrders(token),
+                dashboardService.getOpeningHours(token),
+                dashboardService.getInterruptions(token)
+            ]);
 
-            // Fetch orders data
-            const ordersResponse = await fetch('http://localhost:8090/api/erp/orders', {
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-            });
-            if (ordersResponse.ok) {
-                const ordersData = await ordersResponse.json();
-                setOrders(ordersData.orders);
-                calculateSalesMetrics(ordersData.orders);
-            } else {
-                const errorData = await ordersResponse.json();
-                setError(prevError => prevError ? `${prevError}; ${errorData.message}` : errorData.message || 'Erro ao carregar pedidos');
-            }
-
-            // Fetch opening hours data
-            const openingHoursResponse = await fetch('http://localhost:8090/api/hub/ifood/merchant/opening-hours', {
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-            });
-            if (openingHoursResponse.ok) {
-                const openingHoursData = await openingHoursResponse.json();
-                setOpeningHours(openingHoursData.shifts);
-            } else {
-                const errorData = await openingHoursResponse.json();
-                setError(prevError => prevError ? `${prevError}; ${errorData.message}` : errorData.message || 'Erro ao carregar horários de funcionamento');
-            }
-
-            // Fetch interruptions data
-            const interruptionsResponse = await fetch('http://localhost:8090/api/hub/ifood/merchant/interruptions', {
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-            });
-            if (interruptionsResponse.ok) {
-                const interruptionsData = await interruptionsResponse.json();
-                setInterruptions(interruptionsData);
-            } else {
-                const errorData = await interruptionsResponse.json();
-                setError(prevError => prevError ? `${prevError}; ${errorData.message}` : errorData.message || 'Erro ao carregar interrupções');
-            }
+            setMerchantData(merchantData);
+            setOrders(ordersData.orders);
+            calculateSalesMetrics(ordersData.orders);
+            setOpeningHours(openingHoursData.shifts);
+            setInterruptions(interruptionsData);
 
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
-            setError('Erro de conexão. Por favor, tente novamente.');
+            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
         } finally {
             setLoading(false);
         }

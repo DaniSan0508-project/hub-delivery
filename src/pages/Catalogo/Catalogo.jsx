@@ -21,7 +21,8 @@ import {
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu as MenuIcon } from '@mui/icons-material';
-import Sidebar from './Sidebar';
+import Sidebar from '../../components/Sidebar';
+import productService from '../../services/productService';
 
 const drawerWidth = 240;
 
@@ -35,16 +36,30 @@ function Catalogo() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
+    
     // Check if user is logged in
     const token = localStorage.getItem('authToken');
     if (!token) {
-      navigate('/');
+      if (isMounted) {
+        navigate('/');
+      }
     } else {
       // In a real app, you might want to decode the token to get user info
-      setUser({ name: 'Usuário' });
-      // Fetch products from API
-      fetchProducts(token);
+      if (isMounted) {
+        setUser({ name: 'Usuário' });
+        // Adicionar um pequeno atraso para evitar corrida com outras chamadas
+        setTimeout(() => {
+          if (isMounted) {
+            fetchProducts(token);
+          }
+        }, 200);
+      }
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [navigate]);
 
   const fetchProducts = async (token) => {
@@ -52,23 +67,11 @@ function Catalogo() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:8090/api/erp/products', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProducts(data);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Erro ao carregar produtos');
-      }
+      const productsData = await productService.getProducts(token);
+      setProducts(productsData);
     } catch (error) {
       console.error('Error fetching products:', error);
-      setError('Erro de conexão. Por favor, tente novamente.');
+      setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
     } finally {
       setLoading(false);
     }

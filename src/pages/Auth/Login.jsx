@@ -8,14 +8,14 @@ import {
     Paper,
     IconButton,
     InputAdornment,
-    FormHelperText,
     Alert
 } from '@mui/material'
 import { Visibility, VisibilityOff } from '@mui/icons-material'
-import { validateCnpj } from './utils/validation'
+import { validateCnpj } from '../../utils/validation'
 import { useNavigate } from 'react-router-dom'
+import authService from '../../services/authService'
 
-function App() {
+function Login() {
     const [cnpj, setCnpj] = useState('')
     const [password, setPassword] = useState('')
     const [secretKey, setSecretKey] = useState('')
@@ -36,6 +36,7 @@ function App() {
             return
         }
 
+        // Validate secret key
         if (!secretKey) {
             setLoginError('Por favor, informe a chave secreta')
             return
@@ -45,35 +46,18 @@ function App() {
         setLoading(true)
 
         try {
-            const loginData = {
-                cnpj: cleanCnpj,
-                password: password,
-                secret_key: secretKey
-            }
-
-            const response = await fetch('http://localhost:8090/api/erp/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(loginData)
-            })
-
-            const data = await response.json()
-
-            if (response.ok) {
-                // Save token to localStorage
-                localStorage.setItem('authToken', data.token)
-                // Small delay to ensure token is saved before navigation
-                setTimeout(() => {
-                    // Navigate to dashboard
-                    navigate('/dashboard')
-                }, 100)
-            } else {
-                setLoginError(data.message || 'Erro ao fazer login')
-            }
+            const data = await authService.login(cleanCnpj, password, secretKey)
+            
+            // Save token to localStorage
+            localStorage.setItem('authToken', data.token)
+            
+            // Small delay to ensure token is saved before navigation
+            setTimeout(() => {
+                // Navigate to dashboard
+                navigate('/dashboard')
+            }, 100)
         } catch (error) {
-            setLoginError('Erro de conexão. Por favor, tente novamente.')
+            setLoginError(error.message || 'Erro ao fazer login')
             console.error('Login error:', error)
         } finally {
             setLoading(false)
@@ -176,7 +160,7 @@ function App() {
                                 )
                             }}
                         />
-
+                        
                         <TextField
                             margin="normal"
                             required
@@ -214,4 +198,4 @@ function App() {
     )
 }
 
-export default App
+export default Login
