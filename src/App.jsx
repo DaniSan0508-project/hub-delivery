@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom'
 function App() {
     const [cnpj, setCnpj] = useState('')
     const [password, setPassword] = useState('')
+    const [secretKey, setSecretKey] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [cnpjError, setCnpjError] = useState('')
     const [loginError, setLoginError] = useState('')
@@ -35,18 +36,21 @@ function App() {
             return
         }
 
+        if (!secretKey) {
+            setLoginError('Por favor, informe a chave secreta')
+            return
+        }
+
         setCnpjError('')
         setLoading(true)
 
         try {
-            // Prepare login data
             const loginData = {
                 cnpj: cleanCnpj,
                 password: password,
-                secret_key: "oQj8HZoNHahbzoe2hJI4S15phzZIjj8x"
+                secret_key: secretKey
             }
 
-            // Make API call to login endpoint
             const response = await fetch('http://localhost:8090/api/erp/login', {
                 method: 'POST',
                 headers: {
@@ -58,9 +62,8 @@ function App() {
             const data = await response.json()
 
             if (response.ok) {
-                // Save token to localStorage
+
                 localStorage.setItem('authToken', data.token)
-                // Navigate to dashboard
                 navigate('/dashboard')
             } else {
                 setLoginError(data.message || 'Erro ao fazer login')
@@ -74,7 +77,6 @@ function App() {
     }
 
     const handleCnpjChange = (e) => {
-        // Format CNPJ as the user types (xx.xxx.xxx/xxxx-xx)
         let value = e.target.value.replace(/\D/g, '')
         if (value.length > 14) value = value.substring(0, 14)
 
@@ -169,6 +171,19 @@ function App() {
                                     </InputAdornment>
                                 )
                             }}
+                        />
+
+                        <TextField
+                            margin="normal"
+                            required
+                            fullWidth
+                            name="secretKey"
+                            label="Chave Secreta"
+                            type="password"
+                            id="secretKey"
+                            value={secretKey}
+                            onChange={(e) => setSecretKey(e.target.value)}
+                            helperText="Informe a chave secreta de integração com o iFood"
                         />
 
                         <Button
