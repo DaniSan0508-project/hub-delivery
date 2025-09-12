@@ -346,7 +346,7 @@ function Loja() {
                         <MenuIcon />
                     </IconButton>
                     <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-                        Portal iFood - Loja
+                        Sysfar HubDelivery - Loja
                     </Typography>
                     <Button color="inherit" onClick={handleLogout}>Sair</Button>
                 </Toolbar>
@@ -422,22 +422,27 @@ function Loja() {
                                                         </Typography>
                                                     </Alert>
                                                 ) : (
-                                                    <Alert severity="error">
-                                                        <Typography variant="h6">Problemas detectados na integração</Typography>
-                                                        <Typography>
-                                                            {merchantStatus.data && merchantStatus.data.problems && merchantStatus.data.problems.length > 0
-                                                                ? merchantStatus.data.problems.join(', ')
-                                                                : 'Verifique o status da sua loja no portal do iFood.'
-                                                            }
-                                                        </Typography>
+                                                    <Alert severity="warning">
+                                                        <Typography variant="h6">Loja fechada</Typography>
+                                                        {merchantStatus.data && merchantStatus.data.problems && merchantStatus.data.problems.length > 0 ? (
+                                                            merchantStatus.data.problems.map((problem, index) => (
+                                                                <Typography key={index}>
+                                                                    {problem.description || problem}
+                                                                </Typography>
+                                                            ))
+                                                        ) : (
+                                                            <Typography>
+                                                                A loja está temporariamente fechada. Verifique os horários de funcionamento.
+                                                            </Typography>
+                                                        )}
                                                         <Button
                                                             variant="contained"
-                                                            color="error"
+                                                            color="primary"
                                                             sx={{ mt: 1 }}
                                                             href="https://portal.ifood.com.br"
                                                             target="_blank"
                                                         >
-                                                            Verificar no Portal iFood
+                                                            Verificar no Sysfar HubDelivery
                                                         </Button>
                                                     </Alert>
                                                 )}

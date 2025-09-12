@@ -125,7 +125,7 @@ function Login() {
                     }}
                 >
                     <Typography component="h1" variant="h4" sx={{ mb: 3, fontWeight: 'bold', color: '#ff6b00' }}>
-                        Portal iFood
+                        Sysfar HubDelivery
                     </Typography>
 
                     {showTokenExpiredMessage && (
@@ -193,7 +193,7 @@ function Login() {
                             id="secretKey"
                             value={secretKey}
                             onChange={(e) => setSecretKey(e.target.value)}
-                            helperText="Informe a chave secreta de integração com o iFood"
+                            helperText="Informe a chave secreta de integração com a Sysfar"
                         />
 
                         <Button

@@ -110,7 +110,7 @@ function Catalogo() {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Portal iFood - Catálogo
+            Sysfar HubDelivery - Catálogo
           </Typography>
           <Button color="inherit" onClick={handleLogout}>Sair</Button>
         </Toolbar>

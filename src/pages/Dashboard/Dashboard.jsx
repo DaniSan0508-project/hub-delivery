@@ -190,7 +190,7 @@ function Dashboard() {
                         <MenuIcon />
                     </IconButton>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                        Portal iFood
+                        Sysfar HubDelivery
                     </Typography>
                     <Button color="inherit" onClick={handleLogout}>Sair</Button>
                 </Toolbar>

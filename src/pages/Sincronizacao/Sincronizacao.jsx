@@ -203,7 +203,7 @@ function Sincronizacao() {
                         <MenuIcon />
                     </IconButton>
                     <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-                        Portal iFood - Sincronização
+                        Sysfar HubDelivery - Sincronização
                     </Typography>
                     <Button color="inherit" onClick={handleLogout}>Sair</Button>
                 </Toolbar>

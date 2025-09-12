@@ -156,7 +156,7 @@ function Promocoes() {
                         <MenuIcon />
                     </IconButton>
                     <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-                        Portal iFood - Promoções
+                        Sysfar HubDelivery - Promoções
                     </Typography>
                     <Button color="inherit" onClick={handleLogout}>Sair</Button>
                 </Toolbar>
