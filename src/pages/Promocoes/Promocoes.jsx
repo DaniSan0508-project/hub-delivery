@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -33,17 +34,18 @@ import {
     Grid,
     Card,
     CardContent,
-    Pagination
+    Pagination,
+    Divider,
+    Fab,
+    Tooltip
 } from '@mui/material';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu as MenuIcon, Add as AddIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
+import { Menu as MenuIcon, Add as AddIcon, Remove as RemoveIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import Sidebar from '../../components/Sidebar';
 import promotionService from '../../services/promotionService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 function Promocoes() {
     const navigate = useNavigate();
-    const location = useLocation();
     const queryClient = useQueryClient();
     const [user, setUser] = useState(null);
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -361,7 +363,6 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
     const [formData, setFormData] = useState({
         promotionName: '',
         channels: ['IFOOD-APP'],
-        ean: '',
         initialDate: '',
         finalDate: '',
         promotionType: 'PERCENTAGE',
@@ -369,6 +370,31 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
         quantityToBuy: '',
         quantityToPay: ''
     });
+    
+    const [products, setProducts] = useState([
+        { ean: '', id: Date.now() }
+    ]);
+    
+    const handleAddProduct = () => {
+        setProducts(prev => [
+            ...prev,
+            { ean: '', id: Date.now() }
+        ]);
+    };
+    
+    const handleRemoveProduct = (id) => {
+        if (products.length > 1) {
+            setProducts(prev => prev.filter(product => product.id !== id));
+        }
+    };
+    
+    const handleProductChange = (id, ean) => {
+        setProducts(prev => 
+            prev.map(product => 
+                product.id === id ? { ...product, ean } : product
+            )
+        );
+    };
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -404,8 +430,15 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
             return;
         }
         
-        if (!formData.ean) {
-            setError('EAN do produto é obrigatório');
+        if (products.length === 0 || products.every(product => !product.ean)) {
+            setError('Pelo menos um EAN de produto é obrigatório');
+            setLoading(false);
+            return;
+        }
+        
+        // Verificar se todos os produtos têm EAN preenchido
+        if (products.some(product => !product.ean)) {
+            setError('Todos os produtos devem ter o EAN preenchido');
             setLoading(false);
             return;
         }
@@ -437,29 +470,33 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
         try {
             const token = localStorage.getItem('authToken');
             
-            // Montar o objeto de promoção de acordo com o tipo
-            const item = {
-                ean: formData.ean,
-                initialDate: formData.initialDate,
-                finalDate: formData.finalDate,
-                promotionType: formData.promotionType
-            };
+            // Montar os itens para cada produto
+            const items = products.map(product => {
+                const item = {
+                    ean: product.ean,
+                    initialDate: formData.initialDate,
+                    finalDate: formData.finalDate,
+                    promotionType: formData.promotionType
+                };
 
-            // Adicionar campos específicos de acordo com o tipo
-            if (formData.promotionType === 'PERCENTAGE') {
-                item.discountValue = parseFloat(formData.discountValue);
-            } else if (formData.promotionType === 'LXPY') {
-                item.discountValue = null;
-                item.progressiveDiscount = {
-                    quantityToBuy: parseInt(formData.quantityToBuy),
-                    quantityToPay: parseInt(formData.quantityToPay)
-                };
-            } else if (formData.promotionType === 'PERCENTAGE_PER_X_UNITS') {
-                item.discountValue = parseFloat(formData.discountValue);
-                item.progressiveDiscount = {
-                    quantityToBuy: parseInt(formData.quantityToBuy)
-                };
-            }
+                // Adicionar campos específicos de acordo com o tipo
+                if (formData.promotionType === 'PERCENTAGE') {
+                    item.discountValue = parseFloat(formData.discountValue);
+                } else if (formData.promotionType === 'LXPY') {
+                    item.discountValue = null;
+                    item.progressiveDiscount = {
+                        quantityToBuy: parseInt(formData.quantityToBuy),
+                        quantityToPay: parseInt(formData.quantityToPay)
+                    };
+                } else if (formData.promotionType === 'PERCENTAGE_PER_X_UNITS') {
+                    item.discountValue = parseFloat(formData.discountValue);
+                    item.progressiveDiscount = {
+                        quantityToBuy: parseInt(formData.quantityToBuy)
+                    };
+                }
+
+                return item;
+            });
 
             const promotionData = {
                 aggregationTag: `promocao-${formData.promotionType.toLowerCase()}-${Date.now()}`,
@@ -467,7 +504,7 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
                     {
                         promotionName: formData.promotionName,
                         channels: formData.channels,
-                        items: [item]
+                        items: items
                     }
                 ]
             };
@@ -478,7 +515,6 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
             setFormData({
                 promotionName: '',
                 channels: ['IFOOD-APP'],
-                ean: '',
                 initialDate: '',
                 finalDate: '',
                 promotionType: 'PERCENTAGE',
@@ -486,6 +522,9 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
                 quantityToBuy: '',
                 quantityToPay: ''
             });
+            setProducts([
+                { ean: '', id: Date.now() }
+            ]);
         } catch (err) {
             // Verificar se é um erro de token expirado
             if (err.message && err.message.includes('Sessão expirada')) {
@@ -534,16 +573,60 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
                                             />
                                         </Grid>
                                         <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                required
-                                                label="EAN do Produto"
-                                                name="ean"
-                                                value={formData.ean}
-                                                onChange={handleChange}
-                                                variant="outlined"
-                                                helperText="Código EAN do produto que receberá a promoção"
-                                            />
+                                            <Card variant="outlined">
+                                                <CardContent>
+                                                    <Grid container spacing={2} alignItems="center">
+                                                        <Grid item xs={12}>
+                                                            <Typography variant="h6" component="div" gutterBottom>
+                                                                Produtos na Promoção
+                                                            </Typography>
+                                                            <Typography variant="body2" color="textSecondary" gutterBottom>
+                                                                Adicione os produtos que participarão desta promoção
+                                                            </Typography>
+                                                        </Grid>
+                                                        <Grid item xs={12}>
+                                                            {products.map((product, index) => (
+                                                                <Grid container spacing={2} key={product.id} alignItems="center" sx={{ mb: 2 }}>
+                                                                    <Grid item xs>
+                                                                        <TextField
+                                                                            fullWidth
+                                                                            required
+                                                                            label={`EAN do Produto #${index + 1}`}
+                                                                            value={product.ean}
+                                                                            onChange={(e) => handleProductChange(product.id, e.target.value)}
+                                                                            variant="outlined"
+                                                                            helperText="Código EAN do produto que receberá a promoção"
+                                                                        />
+                                                                    </Grid>
+                                                                    <Grid item>
+                                                                        {products.length > 1 && (
+                                                                            <Tooltip title="Remover produto">
+                                                                                <IconButton 
+                                                                                    color="error" 
+                                                                                    onClick={() => handleRemoveProduct(product.id)}
+                                                                                    size="small"
+                                                                                >
+                                                                                    <RemoveIcon />
+                                                                                </IconButton>
+                                                                            </Tooltip>
+                                                                        )}
+                                                                    </Grid>
+                                                                </Grid>
+                                                            ))}
+                                                        </Grid>
+                                                        <Grid item xs={12}>
+                                                            <Button
+                                                                variant="outlined"
+                                                                startIcon={<AddIcon />}
+                                                                onClick={handleAddProduct}
+                                                                size="small"
+                                                            >
+                                                                Adicionar outro produto
+                                                            </Button>
+                                                        </Grid>
+                                                    </Grid>
+                                                </CardContent>
+                                            </Card>
                                         </Grid>
                                         <Grid item xs={12} md={6}>
                                             <TextField
