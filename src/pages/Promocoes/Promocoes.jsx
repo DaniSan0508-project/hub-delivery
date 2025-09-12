@@ -359,7 +359,6 @@ function Promocoes() {
 // Componente separado para o formulário de criação de promoção
 function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
     const [formData, setFormData] = useState({
-        aggregationTag: '',
         promotionName: '',
         channels: ['IFOOD-APP'],
         ean: '',
@@ -430,7 +429,7 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
         }
         
         if (formData.promotionType === 'PERCENTAGE_PER_X_UNITS' && (!formData.discountValue || !formData.quantityToBuy)) {
-            setError('Valor do desconto e quantidade a comprar são obrigatórios para promoções PERCENTAGE_PER_X_UNITS');
+            setError('Valor do desconto e quantidade a comprar são obrigatórias para promoções PERCENTAGE_PER_X_UNITS');
             setLoading(false);
             return;
         }
@@ -463,7 +462,7 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
             }
 
             const promotionData = {
-                aggregationTag: formData.aggregationTag || `promocao-${formData.promotionType.toLowerCase()}-${Date.now()}`,
+                aggregationTag: `promocao-${formData.promotionType.toLowerCase()}-${Date.now()}`,
                 promotions: [
                     {
                         promotionName: formData.promotionName,
@@ -477,7 +476,6 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
             onPromotionCreated();
             // Reset form
             setFormData({
-                aggregationTag: '',
                 promotionName: '',
                 channels: ['IFOOD-APP'],
                 ean: '',
@@ -510,160 +508,234 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
                     </Alert>
                 )}
                 <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-                    <Grid container spacing={2}>
+                    <Grid container spacing={3}>
                         <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                label="Tag de Agregação (opcional)"
-                                name="aggregationTag"
-                                value={formData.aggregationTag}
-                                onChange={handleChange}
-                                helperText="Se não informado, será gerado automaticamente"
-                            />
+                            <Card variant="outlined">
+                                <CardContent>
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={12}>
+                                            <Typography variant="h6" component="div" gutterBottom>
+                                                Informações Básicas
+                                            </Typography>
+                                            <Typography variant="body2" color="textSecondary" gutterBottom>
+                                                Preencha as informações gerais da promoção
+                                            </Typography>
+                                        </Grid>
+                                        <Grid item xs={12}>
+                                            <TextField
+                                                fullWidth
+                                                required
+                                                label="Nome da Promoção"
+                                                name="promotionName"
+                                                value={formData.promotionName}
+                                                onChange={handleChange}
+                                                variant="outlined"
+                                                helperText="Um nome descritivo para identificar esta promoção"
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12}>
+                                            <TextField
+                                                fullWidth
+                                                required
+                                                label="EAN do Produto"
+                                                name="ean"
+                                                value={formData.ean}
+                                                onChange={handleChange}
+                                                variant="outlined"
+                                                helperText="Código EAN do produto que receberá a promoção"
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12} md={6}>
+                                            <TextField
+                                                fullWidth
+                                                required
+                                                label="Data Inicial"
+                                                type="date"
+                                                name="initialDate"
+                                                value={formData.initialDate}
+                                                onChange={handleChange}
+                                                InputLabelProps={{ shrink: true }}
+                                                variant="outlined"
+                                                helperText="Data de início da promoção"
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12} md={6}>
+                                            <TextField
+                                                fullWidth
+                                                required
+                                                label="Data Final"
+                                                type="date"
+                                                name="finalDate"
+                                                value={formData.finalDate}
+                                                onChange={handleChange}
+                                                InputLabelProps={{ shrink: true }}
+                                                variant="outlined"
+                                                helperText="Data de término da promoção"
+                                            />
+                                        </Grid>
+                                    </Grid>
+                                </CardContent>
+                            </Card>
                         </Grid>
+                        
                         <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                required
-                                label="Nome da Promoção"
-                                name="promotionName"
-                                value={formData.promotionName}
-                                onChange={handleChange}
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                required
-                                label="EAN do Produto"
-                                name="ean"
-                                value={formData.ean}
-                                onChange={handleChange}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                required
-                                label="Data Inicial"
-                                type="date"
-                                name="initialDate"
-                                value={formData.initialDate}
-                                onChange={handleChange}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                required
-                                label="Data Final"
-                                type="date"
-                                name="finalDate"
-                                value={formData.finalDate}
-                                onChange={handleChange}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <FormControl fullWidth required>
-                                <InputLabel>Tipo de Promoção</InputLabel>
-                                <Select
-                                    name="promotionType"
-                                    value={formData.promotionType}
-                                    onChange={handlePromotionTypeChange}
-                                    label="Tipo de Promoção"
-                                >
-                                    <MenuItem value="PERCENTAGE">Percentual de Desconto (%)</MenuItem>
-                                    <MenuItem value="LXPY">Leve X Pague Y</MenuItem>
-                                    <MenuItem value="PERCENTAGE_PER_X_UNITS">Percentual de Desconto na Xª Unidade</MenuItem>
-                                </Select>
-                            </FormControl>
+                            <Card variant="outlined">
+                                <CardContent>
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={12}>
+                                            <Typography variant="h6" component="div" gutterBottom>
+                                                Tipo de Promoção
+                                            </Typography>
+                                            <Typography variant="body2" color="textSecondary" gutterBottom>
+                                                Selecione o tipo de promoção e configure os parâmetros específicos
+                                            </Typography>
+                                        </Grid>
+                                        <Grid item xs={12}>
+                                            <FormControl fullWidth required variant="outlined">
+                                                <InputLabel>Tipo de Promoção</InputLabel>
+                                                <Select
+                                                    name="promotionType"
+                                                    value={formData.promotionType}
+                                                    onChange={handlePromotionTypeChange}
+                                                    label="Tipo de Promoção"
+                                                >
+                                                    <MenuItem value="PERCENTAGE">Percentual de Desconto (%)</MenuItem>
+                                                    <MenuItem value="LXPY">Leve X Pague Y</MenuItem>
+                                                    <MenuItem value="PERCENTAGE_PER_X_UNITS">Percentual de Desconto na Xª Unidade</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                    </Grid>
+                                </CardContent>
+                            </Card>
                         </Grid>
                         
                         {/* Campos condicionais baseados no tipo de promoção */}
                         {formData.promotionType === 'PERCENTAGE' && (
                             <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    required
-                                    label="Percentual de Desconto (%)"
-                                    type="number"
-                                    name="discountValue"
-                                    value={formData.discountValue}
-                                    onChange={handleChange}
-                                    InputProps={{ inputProps: { min: 0, max: 70, step: 0.1 } }}
-                                    helperText="Máximo permitido: 70%"
-                                />
-                            </Grid>
-                        )}
-                        
-                        {(formData.promotionType === 'LXPY' || formData.promotionType === 'PERCENTAGE_PER_X_UNITS') && (
-                            <Grid item xs={12}>
-                                <Typography variant="subtitle2" gutterBottom>
-                                    Configuração da Promoção
-                                </Typography>
+                                <Card variant="outlined" sx={{ borderColor: 'primary.main' }}>
+                                    <CardContent>
+                                        <Grid container spacing={2}>
+                                            <Grid item xs={12}>
+                                                <Typography variant="h6" component="div" gutterBottom color="primary">
+                                                    Configuração: Percentual de Desconto (%)
+                                                </Typography>
+                                                <Typography variant="body2" color="textSecondary" gutterBottom>
+                                                    Defina o percentual de desconto aplicado ao produto
+                                                </Typography>
+                                            </Grid>
+                                            <Grid item xs={12} md={6}>
+                                                <TextField
+                                                    fullWidth
+                                                    required
+                                                    label="Percentual de Desconto (%)"
+                                                    type="number"
+                                                    name="discountValue"
+                                                    value={formData.discountValue}
+                                                    onChange={handleChange}
+                                                    InputProps={{ inputProps: { min: 0, max: 70, step: 0.1 } }}
+                                                    helperText="Máximo permitido: 70%"
+                                                    variant="outlined"
+                                                />
+                                            </Grid>
+                                        </Grid>
+                                    </CardContent>
+                                </Card>
                             </Grid>
                         )}
                         
                         {formData.promotionType === 'LXPY' && (
-                            <>
-                                <Grid item xs={12} sm={6}>
-                                    <TextField
-                                        fullWidth
-                                        required
-                                        label="Leve (Quantidade)"
-                                        type="number"
-                                        name="quantityToBuy"
-                                        value={formData.quantityToBuy}
-                                        onChange={handleChange}
-                                        InputProps={{ inputProps: { min: 1 } }}
-                                    />
-                                </Grid>
-                                <Grid item xs={12} sm={6}>
-                                    <TextField
-                                        fullWidth
-                                        required
-                                        label="Pague (Quantidade)"
-                                        type="number"
-                                        name="quantityToPay"
-                                        value={formData.quantityToPay}
-                                        onChange={handleChange}
-                                        InputProps={{ inputProps: { min: 1 } }}
-                                    />
-                                </Grid>
-                            </>
+                            <Grid item xs={12}>
+                                <Card variant="outlined" sx={{ borderColor: 'secondary.main' }}>
+                                    <CardContent>
+                                        <Grid container spacing={2}>
+                                            <Grid item xs={12}>
+                                                <Typography variant="h6" component="div" gutterBottom color="secondary">
+                                                    Configuração: Leve X Pague Y
+                                                </Typography>
+                                                <Typography variant="body2" color="textSecondary" gutterBottom>
+                                                    Defina a quantidade de produtos que o cliente deve levar e quantos irá pagar
+                                                </Typography>
+                                            </Grid>
+                                            <Grid item xs={12} sm={6}>
+                                                <TextField
+                                                    fullWidth
+                                                    required
+                                                    label="Leve (Quantidade)"
+                                                    type="number"
+                                                    name="quantityToBuy"
+                                                    value={formData.quantityToBuy}
+                                                    onChange={handleChange}
+                                                    InputProps={{ inputProps: { min: 1 } }}
+                                                    helperText="Quantidade de produtos que o cliente deve levar"
+                                                    variant="outlined"
+                                                />
+                                            </Grid>
+                                            <Grid item xs={12} sm={6}>
+                                                <TextField
+                                                    fullWidth
+                                                    required
+                                                    label="Pague (Quantidade)"
+                                                    type="number"
+                                                    name="quantityToPay"
+                                                    value={formData.quantityToPay}
+                                                    onChange={handleChange}
+                                                    InputProps={{ inputProps: { min: 1 } }}
+                                                    helperText="Quantidade de produtos que o cliente irá pagar"
+                                                    variant="outlined"
+                                                />
+                                            </Grid>
+                                        </Grid>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
                         )}
                         
                         {formData.promotionType === 'PERCENTAGE_PER_X_UNITS' && (
-                            <>
-                                <Grid item xs={12} sm={6}>
-                                    <TextField
-                                        fullWidth
-                                        required
-                                        label="Desconto na Unidade (%)"
-                                        type="number"
-                                        name="discountValue"
-                                        value={formData.discountValue}
-                                        onChange={handleChange}
-                                        InputProps={{ inputProps: { min: 0, max: 70, step: 0.1 } }}
-                                        helperText="Máximo permitido: 70%"
-                                    />
-                                </Grid>
-                                <Grid item xs={12} sm={6}>
-                                    <TextField
-                                        fullWidth
-                                        required
-                                        label="Na Xª Unidade"
-                                        type="number"
-                                        name="quantityToBuy"
-                                        value={formData.quantityToBuy}
-                                        onChange={handleChange}
-                                        InputProps={{ inputProps: { min: 1 } }}
-                                        helperText="Aplicar desconto na Xª unidade"
-                                    />
-                                </Grid>
-                            </>
+                            <Grid item xs={12}>
+                                <Card variant="outlined" sx={{ borderColor: 'success.main' }}>
+                                    <CardContent>
+                                        <Grid container spacing={2}>
+                                            <Grid item xs={12}>
+                                                <Typography variant="h6" component="div" gutterBottom sx={{ color: 'success.main' }}>
+                                                    Configuração: Percentual de Desconto na Xª Unidade
+                                                </Typography>
+                                                <Typography variant="body2" color="textSecondary" gutterBottom>
+                                                    Defina o percentual de desconto aplicado a uma unidade específica
+                                                </Typography>
+                                            </Grid>
+                                            <Grid item xs={12} sm={6}>
+                                                <TextField
+                                                    fullWidth
+                                                    required
+                                                    label="Desconto na Unidade (%)"
+                                                    type="number"
+                                                    name="discountValue"
+                                                    value={formData.discountValue}
+                                                    onChange={handleChange}
+                                                    InputProps={{ inputProps: { min: 0, max: 70, step: 0.1 } }}
+                                                    helperText="Máximo permitido: 70%"
+                                                    variant="outlined"
+                                                />
+                                            </Grid>
+                                            <Grid item xs={12} sm={6}>
+                                                <TextField
+                                                    fullWidth
+                                                    required
+                                                    label="Na Xª Unidade"
+                                                    type="number"
+                                                    name="quantityToBuy"
+                                                    value={formData.quantityToBuy}
+                                                    onChange={handleChange}
+                                                    InputProps={{ inputProps: { min: 1 } }}
+                                                    helperText="Aplicar desconto na Xª unidade"
+                                                    variant="outlined"
+                                                />
+                                            </Grid>
+                                        </Grid>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
                         )}
                     </Grid>
                 </Box>
