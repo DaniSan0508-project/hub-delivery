@@ -346,197 +346,323 @@ function Promocoes() {
 
 // Componente separado para o formulário de criação de promoção
 function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
-const [formData, setFormData] = useState({
-    aggregationTag: '',
-    promotionName: '',
-    channels: ['IFOOD-APP'],
-    ean: '',
-    initialDate: '',
-    finalDate: '',
-    promotionType: 'LXPY',
-    quantityToBuy: 3,
-    quantityToPay: 2
-});
-const [loading, setLoading] = useState(false);
-const [error, setError] = useState('');
+    const [formData, setFormData] = useState({
+        aggregationTag: '',
+        promotionName: '',
+        channels: ['IFOOD-APP'],
+        ean: '',
+        initialDate: '',
+        finalDate: '',
+        promotionType: 'PERCENTAGE',
+        discountValue: '',
+        quantityToBuy: '',
+        quantityToPay: ''
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
-const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-        ...prev,
-        [name]: value
-    }));
-};
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
 
-const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+    const handlePromotionTypeChange = (e) => {
+        const value = e.target.value;
+        setFormData(prev => ({
+            ...prev,
+            promotionType: value,
+            // Resetar campos específicos quando mudar o tipo
+            discountValue: value === 'LXPY' ? '' : prev.discountValue,
+            quantityToBuy: value === 'PERCENTAGE' ? '' : prev.quantityToBuy,
+            quantityToPay: value !== 'LXPY' ? '' : prev.quantityToPay
+        }));
+    };
 
-    try {
-        const token = localStorage.getItem('authToken');
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        // Validações
+        if (!formData.promotionName) {
+            setError('Nome da promoção é obrigatório');
+            setLoading(false);
+            return;
+        }
         
-        const promotionData = {
-            aggregationTag: formData.aggregationTag || `promocao-${formData.promotionType.toLowerCase()}-${Date.now()}`,
-            promotions: [
-                {
-                    promotionName: formData.promotionName,
-                    channels: formData.channels,
-                    items: [
-                        {
-                            ean: formData.ean,
-                            discountValue: null,
-                            initialDate: formData.initialDate,
-                            finalDate: formData.finalDate,
-                            promotionType: formData.promotionType,
-                            progressiveDiscount: {
-                                quantityToBuy: parseInt(formData.quantityToBuy),
-                                quantityToPay: parseInt(formData.quantityToPay)
-                            }
-                        }
-                    ]
-                }
-            ]
-        };
+        if (!formData.ean) {
+            setError('EAN do produto é obrigatório');
+            setLoading(false);
+            return;
+        }
+        
+        if (!formData.initialDate || !formData.finalDate) {
+            setError('Datas inicial e final são obrigatórias');
+            setLoading(false);
+            return;
+        }
+        
+        if (formData.promotionType === 'PERCENTAGE' && !formData.discountValue) {
+            setError('Valor do desconto é obrigatório para promoções PERCENTAGE');
+            setLoading(false);
+            return;
+        }
+        
+        if (formData.promotionType === 'LXPY' && (!formData.quantityToBuy || !formData.quantityToPay)) {
+            setError('Quantidade a comprar e a pagar são obrigatórias para promoções LXPY');
+            setLoading(false);
+            return;
+        }
+        
+        if (formData.promotionType === 'PERCENTAGE_PER_X_UNITS' && (!formData.discountValue || !formData.quantityToBuy)) {
+            setError('Valor do desconto e quantidade a comprar são obrigatórios para promoções PERCENTAGE_PER_X_UNITS');
+            setLoading(false);
+            return;
+        }
 
-        await promotionService.createPromotion(promotionData, token);
-        onPromotionCreated();
-        // Reset form
-        setFormData({
-            aggregationTag: '',
-            promotionName: '',
-            channels: ['IFOOD-APP'],
-            ean: '',
-            initialDate: '',
-            finalDate: '',
-            promotionType: 'LXPY',
-            quantityToBuy: 3,
-            quantityToPay: 2
-        });
-    } catch (err) {
-        setError(err.message || 'Erro ao criar promoção');
-    } finally {
-        setLoading(false);
-    }
-};
+        try {
+            const token = localStorage.getItem('authToken');
+            
+            // Montar o objeto de promoção de acordo com o tipo
+            const item = {
+                ean: formData.ean,
+                initialDate: formData.initialDate,
+                finalDate: formData.finalDate,
+                promotionType: formData.promotionType
+            };
 
-return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Criar Nova Promoção</DialogTitle>
-        <DialogContent>
-            {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                    {error}
-                </Alert>
-            )}
-            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-                <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                        <TextField
-                            fullWidth
-                            label="Tag de Agregação (opcional)"
-                            name="aggregationTag"
-                            value={formData.aggregationTag}
-                            onChange={handleChange}
-                            helperText="Se não informado, será gerado automaticamente"
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <TextField
-                            fullWidth
-                            required
-                            label="Nome da Promoção"
-                            name="promotionName"
-                            value={formData.promotionName}
-                            onChange={handleChange}
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <TextField
-                            fullWidth
-                            required
-                            label="EAN do Produto"
-                            name="ean"
-                            value={formData.ean}
-                            onChange={handleChange}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            required
-                            label="Data Inicial"
-                            type="date"
-                            name="initialDate"
-                            value={formData.initialDate}
-                            onChange={handleChange}
-                            InputLabelProps={{ shrink: true }}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            required
-                            label="Data Final"
-                            type="date"
-                            name="finalDate"
-                            value={formData.finalDate}
-                            onChange={handleChange}
-                            InputLabelProps={{ shrink: true }}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                            <InputLabel>Tipo de Promoção</InputLabel>
-                            <Select
-                                name="promotionType"
-                                value={formData.promotionType}
+            // Adicionar campos específicos de acordo com o tipo
+            if (formData.promotionType === 'PERCENTAGE') {
+                item.discountValue = parseFloat(formData.discountValue);
+            } else if (formData.promotionType === 'LXPY') {
+                item.discountValue = null;
+                item.progressiveDiscount = {
+                    quantityToBuy: parseInt(formData.quantityToBuy),
+                    quantityToPay: parseInt(formData.quantityToPay)
+                };
+            } else if (formData.promotionType === 'PERCENTAGE_PER_X_UNITS') {
+                item.discountValue = parseFloat(formData.discountValue);
+                item.progressiveDiscount = {
+                    quantityToBuy: parseInt(formData.quantityToBuy)
+                };
+            }
+
+            const promotionData = {
+                aggregationTag: formData.aggregationTag || `promocao-${formData.promotionType.toLowerCase()}-${Date.now()}`,
+                promotions: [
+                    {
+                        promotionName: formData.promotionName,
+                        channels: formData.channels,
+                        items: [item]
+                    }
+                ]
+            };
+
+            await promotionService.createPromotion(promotionData, token);
+            onPromotionCreated();
+            // Reset form
+            setFormData({
+                aggregationTag: '',
+                promotionName: '',
+                channels: ['IFOOD-APP'],
+                ean: '',
+                initialDate: '',
+                finalDate: '',
+                promotionType: 'PERCENTAGE',
+                discountValue: '',
+                quantityToBuy: '',
+                quantityToPay: ''
+            });
+        } catch (err) {
+            setError(err.message || 'Erro ao criar promoção');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+            <DialogTitle>Criar Nova Promoção</DialogTitle>
+            <DialogContent>
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
+                )}
+                <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <TextField
+                                fullWidth
+                                label="Tag de Agregação (opcional)"
+                                name="aggregationTag"
+                                value={formData.aggregationTag}
                                 onChange={handleChange}
-                                label="Tipo de Promoção"
-                            >
-                                <MenuItem value="LXPY">Leve X Pague Y</MenuItem>
-                            </Select>
-                        </FormControl>
+                                helperText="Se não informado, será gerado automaticamente"
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField
+                                fullWidth
+                                required
+                                label="Nome da Promoção"
+                                name="promotionName"
+                                value={formData.promotionName}
+                                onChange={handleChange}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField
+                                fullWidth
+                                required
+                                label="EAN do Produto"
+                                name="ean"
+                                value={formData.ean}
+                                onChange={handleChange}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                fullWidth
+                                required
+                                label="Data Inicial"
+                                type="date"
+                                name="initialDate"
+                                value={formData.initialDate}
+                                onChange={handleChange}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                fullWidth
+                                required
+                                label="Data Final"
+                                type="date"
+                                name="finalDate"
+                                value={formData.finalDate}
+                                onChange={handleChange}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <FormControl fullWidth required>
+                                <InputLabel>Tipo de Promoção</InputLabel>
+                                <Select
+                                    name="promotionType"
+                                    value={formData.promotionType}
+                                    onChange={handlePromotionTypeChange}
+                                    label="Tipo de Promoção"
+                                >
+                                    <MenuItem value="PERCENTAGE">Percentual de Desconto (%)</MenuItem>
+                                    <MenuItem value="LXPY">Leve X Pague Y</MenuItem>
+                                    <MenuItem value="PERCENTAGE_PER_X_UNITS">Percentual de Desconto na Xª Unidade</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        
+                        {/* Campos condicionais baseados no tipo de promoção */}
+                        {formData.promotionType === 'PERCENTAGE' && (
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    required
+                                    label="Percentual de Desconto (%)"
+                                    type="number"
+                                    name="discountValue"
+                                    value={formData.discountValue}
+                                    onChange={handleChange}
+                                    InputProps={{ inputProps: { min: 0, max: 70, step: 0.1 } }}
+                                    helperText="Máximo permitido: 70%"
+                                />
+                            </Grid>
+                        )}
+                        
+                        {(formData.promotionType === 'LXPY' || formData.promotionType === 'PERCENTAGE_PER_X_UNITS') && (
+                            <Grid item xs={12}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                    Configuração da Promoção
+                                </Typography>
+                            </Grid>
+                        )}
+                        
+                        {formData.promotionType === 'LXPY' && (
+                            <>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        required
+                                        label="Leve (Quantidade)"
+                                        type="number"
+                                        name="quantityToBuy"
+                                        value={formData.quantityToBuy}
+                                        onChange={handleChange}
+                                        InputProps={{ inputProps: { min: 1 } }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        required
+                                        label="Pague (Quantidade)"
+                                        type="number"
+                                        name="quantityToPay"
+                                        value={formData.quantityToPay}
+                                        onChange={handleChange}
+                                        InputProps={{ inputProps: { min: 1 } }}
+                                    />
+                                </Grid>
+                            </>
+                        )}
+                        
+                        {formData.promotionType === 'PERCENTAGE_PER_X_UNITS' && (
+                            <>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        required
+                                        label="Desconto na Unidade (%)"
+                                        type="number"
+                                        name="discountValue"
+                                        value={formData.discountValue}
+                                        onChange={handleChange}
+                                        InputProps={{ inputProps: { min: 0, max: 70, step: 0.1 } }}
+                                        helperText="Máximo permitido: 70%"
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        required
+                                        label="Na Xª Unidade"
+                                        type="number"
+                                        name="quantityToBuy"
+                                        value={formData.quantityToBuy}
+                                        onChange={handleChange}
+                                        InputProps={{ inputProps: { min: 1 } }}
+                                        helperText="Aplicar desconto na Xª unidade"
+                                    />
+                                </Grid>
+                            </>
+                        )}
                     </Grid>
-                    <Grid item xs={12} sm={3}>
-                        <TextField
-                            fullWidth
-                            required
-                            label="Leve"
-                            type="number"
-                            name="quantityToBuy"
-                            value={formData.quantityToBuy}
-                            onChange={handleChange}
-                            InputProps={{ inputProps: { min: 1 } }}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={3}>
-                        <TextField
-                            fullWidth
-                            required
-                            label="Pague"
-                            type="number"
-                            name="quantityToPay"
-                            value={formData.quantityToPay}
-                            onChange={handleChange}
-                            InputProps={{ inputProps: { min: 1 } }}
-                        />
-                    </Grid>
-                </Grid>
-            </Box>
-        </DialogContent>
-        <DialogActions>
-            <Button onClick={onClose}>Cancelar</Button>
-            <Button
-                onClick={handleSubmit}
-                variant="contained"
-                disabled={loading}
-            >
-                {loading ? <CircularProgress size={24} /> : 'Criar Promoção'}
-            </Button>
-        </DialogActions>
-    </Dialog>
-);
+                </Box>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose}>Cancelar</Button>
+                <Button
+                    onClick={handleSubmit}
+                    variant="contained"
+                    disabled={loading}
+                >
+                    {loading ? <CircularProgress size={24} /> : 'Criar Promoção'}
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
 }
 
 export default Promocoes;
