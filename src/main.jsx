@@ -7,6 +7,7 @@ import Sincronizacao from './pages/Sincronizacao/Sincronizacao.jsx'
 import Catalogo from './pages/Catalogo/Catalogo.jsx'
 import Pedidos from './pages/Pedidos/Pedidos.jsx'
 import Loja from './pages/Loja/Loja.jsx'
+import Promocoes from './pages/Promocoes/Promocoes.jsx'
 import { useStoreStatus } from './hooks/useStoreStatus.js'
 import '@fontsource/roboto/300.css'
 import '@fontsource/roboto/400.css'
@@ -66,6 +67,10 @@ const router = createBrowserRouter([
   {
     path: "/loja",
     element: <Loja />,
+  },
+  {
+    path: "/promocoes",
+    element: <Promocoes />,
   },
 ])
 

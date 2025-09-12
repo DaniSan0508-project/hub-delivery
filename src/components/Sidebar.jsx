@@ -15,7 +15,8 @@ import {
     Restaurant as RestaurantIcon,
     Sync as SyncIcon,
     Store as StoreIcon,
-    Category as CategoryIcon
+    Category as CategoryIcon,
+    LocalOffer as LocalOfferIcon
 } from '@mui/icons-material';
 import { useStoreStatus } from '../hooks/useStoreStatus';
 
@@ -32,6 +33,7 @@ function Sidebar({ mobileOpen, handleDrawerToggle }) {
         { text: 'Catálogo', icon: <CategoryIcon />, path: '/catalogo' },
         { text: 'Pedidos', icon: <RestaurantIcon />, path: '/pedidos' },
         { text: 'Loja', icon: <StoreIcon />, path: '/loja' },
+        { text: 'Promoções', icon: <LocalOfferIcon />, path: '/promocoes' },
     ];
 
     return (
