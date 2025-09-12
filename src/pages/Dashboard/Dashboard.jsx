@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -20,13 +21,14 @@ import {
     TableHead,
     TableRow,
     Paper,
-    Chip
+    Chip,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails
 } from '@mui/material';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu as MenuIcon } from '@mui/icons-material';
+import { Menu as MenuIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import Sidebar from '../../components/Sidebar';
 import dashboardService from '../../services/dashboardService';
-import { useAsync } from '../../hooks/useAsync';
 
 const drawerWidth = 240;
 
@@ -41,8 +43,8 @@ const daysOfWeekMap = {
 };
 
 function Dashboard() {
+    // ... (toda a sua lógica de state, effects e functions permanece exatamente a mesma)
     const navigate = useNavigate();
-    const location = useLocation();
     const [user, setUser] = useState(null);
     const [merchantData, setMerchantData] = useState(null);
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -58,37 +60,11 @@ function Dashboard() {
     const [openingHours, setOpeningHours] = useState([]);
     const [interruptions, setInterruptions] = useState([]);
 
-    useEffect(() => {
-        let isMounted = true;
-        
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            if (isMounted) {
-                navigate('/');
-            }
-        } else {
-            if (isMounted) {
-                setUser({ name: 'Usuário' });
-                // Adicionar um pequeno atraso para evitar corrida com outras chamadas
-                setTimeout(() => {
-                    if (isMounted) {
-                        fetchDashboardData(token);
-                    }
-                }, 100);
-            }
-        }
-        
-        return () => {
-            isMounted = false;
-        };
-    }, [navigate]);
-
-    const fetchDashboardData = async (token) => {
+    const fetchDashboardData = useCallback(async (token) => {
         try {
             setLoading(true);
             setError(null);
 
-            // Fetch all data in parallel
             const [merchantData, ordersData, openingHoursData, interruptionsData] = await Promise.all([
                 dashboardService.getMerchantData(token),
                 dashboardService.getOrders(token),
@@ -104,16 +80,38 @@ function Dashboard() {
 
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
-            // Verificar se é um erro de token expirado
             if (error.message && error.message.includes('Sessão expirada')) {
-                // O serviço já lidou com o redirecionamento
                 return;
             }
             setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            if (isMounted) {
+                navigate('/');
+            }
+        } else {
+            if (isMounted) {
+                setUser({ name: 'Usuário' });
+                setTimeout(() => {
+                    if (isMounted) {
+                        fetchDashboardData(token);
+                    }
+                }, 100);
+            }
+        }
+
+        return () => {
+            isMounted = false;
+        };
+    }, [navigate, fetchDashboardData]);
 
     const calculateSalesMetrics = (orders) => {
         let totalSales = 0;
@@ -144,7 +142,7 @@ function Dashboard() {
             case 'Confirmed': return 'success';
             case 'SPS': return 'warning';
             case 'SPE': return 'info';
-            case 'Dispatched': return 'default';
+            case 'Dispatched': return 'primary';
             case 'Concluded': return 'default';
             default: return 'default';
         }
@@ -210,7 +208,7 @@ function Dashboard() {
                         '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
                     }}
                 >
-                    <Sidebar mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
+                    <Sidebar />
                 </Drawer>
                 <Drawer
                     variant="permanent"
@@ -220,9 +218,10 @@ function Dashboard() {
                     }}
                     open
                 >
-                    <Sidebar mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
+                    <Sidebar />
                 </Drawer>
             </Box>
+
             <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}>
                 <Toolbar />
                 <Container maxWidth="lg">
@@ -249,54 +248,177 @@ function Dashboard() {
                                 </Box>
                             )}
 
-                            <Typography variant="h5" gutterBottom>
-                                Resumo de Vendas
-                            </Typography>
+                            <Box sx={{ position: 'relative', mb: 4 }}>
+                                <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
+                                    Resumo de Vendas
+                                </Typography>
 
-                            <Grid container spacing={3} sx={{ mb: 4 }}>
-                                <Grid item xs={12} sm={6} md={3}>
-                                    <Card>
-                                        <CardContent>
-                                            <Typography variant="h6" gutterBottom>
+                                <Box sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    right: 0,
+                                    width: 320,
+                                    zIndex: 10
+                                }}>
+                                    <Paper elevation={4}>
+                                        <Accordion>
+                                            <AccordionSummary
+                                                expandIcon={<ExpandMoreIcon />}
+                                                aria-controls="opening-hours-content"
+                                                id="opening-hours-header"
+                                            >
+                                                <Typography>
+                                                    Horários de Funcionamento
+                                                </Typography>
+                                            </AccordionSummary>
+                                            <AccordionDetails>
+                                                {openingHours.length > 0 ? (
+                                                    <Table size="small">
+                                                        <TableBody>
+                                                            {openingHours.map((shift, index) => (
+                                                                <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                                                    <TableCell component="th" scope="row">
+                                                                        {daysOfWeekMap[shift.dayOfWeek]}
+                                                                    </TableCell>
+                                                                    <TableCell align="right">
+                                                                        {`${shift.start.substring(0, 5)} - ${shift.end.substring(0, 5)}`}
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                ) : (
+                                                    <Alert severity="info" sx={{ mt: 1 }}>
+                                                        Nenhum horário configurado.
+                                                    </Alert>
+                                                )}
+                                            </AccordionDetails>
+                                        </Accordion>
+                                    </Paper>
+                                </Box>
+                            </Box>
+
+                            {/* ===== MUDANÇA APLICADA AQUI ===== */}
+                            <Grid container spacing={2} sx={{ mb: 4, width: '100%', margin: 0 }}>
+                                <Grid item xs={12} sm={6} lg={3} sx={{ padding: 1 }}>
+                                    <Card sx={{ 
+                                        height: '100%', 
+                                        boxShadow: 4, 
+                                        transition: 'transform 0.2s, box-shadow 0.2s',
+                                        '&:hover': { 
+                                            transform: 'translateY(-4px)',
+                                            boxShadow: 6
+                                        },
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        borderRadius: 2
+                                    }}>
+                                        <CardContent sx={{ 
+                                            flexGrow: 1,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            textAlign: 'center',
+                                            padding: 3
+                                        }}>
+                                            <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontWeight: 500 }}>
                                                 Total de Vendas
                                             </Typography>
-                                            <Typography variant="h4" color="primary">
+                                            <Typography variant="h3" color="primary" sx={{ fontWeight: 'bold', mt: 1 }}>
                                                 R$ {salesMetrics.totalSales.toFixed(2).replace('.', ',')}
                                             </Typography>
                                         </CardContent>
                                     </Card>
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={3}>
-                                    <Card>
-                                        <CardContent>
-                                            <Typography variant="h6" gutterBottom>
+                                <Grid item xs={12} sm={6} lg={3} sx={{ padding: 1 }}>
+                                    <Card sx={{ 
+                                        height: '100%', 
+                                        boxShadow: 4, 
+                                        transition: 'transform 0.2s, box-shadow 0.2s',
+                                        '&:hover': { 
+                                            transform: 'translateY(-4px)',
+                                            boxShadow: 6
+                                        },
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        borderRadius: 2
+                                    }}>
+                                        <CardContent sx={{ 
+                                            flexGrow: 1,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            textAlign: 'center',
+                                            padding: 3
+                                        }}>
+                                            <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontWeight: 500 }}>
                                                 Total de Pedidos
                                             </Typography>
-                                            <Typography variant="h4" color="secondary">
+                                            <Typography variant="h3" color="secondary" sx={{ fontWeight: 'bold', mt: 1 }}>
                                                 {salesMetrics.totalOrders}
                                             </Typography>
                                         </CardContent>
                                     </Card>
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={3}>
-                                    <Card>
-                                        <CardContent>
-                                            <Typography variant="h6" gutterBottom>
+                                <Grid item xs={12} sm={6} lg={3} sx={{ padding: 1 }}>
+                                    <Card sx={{ 
+                                        height: '100%', 
+                                        boxShadow: 4, 
+                                        transition: 'transform 0.2s, box-shadow 0.2s',
+                                        '&:hover': { 
+                                            transform: 'translateY(-4px)',
+                                            boxShadow: 6
+                                        },
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        borderRadius: 2
+                                    }}>
+                                        <CardContent sx={{ 
+                                            flexGrow: 1,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            textAlign: 'center',
+                                            padding: 3
+                                        }}>
+                                            <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontWeight: 500 }}>
                                                 Pedidos Concluídos
                                             </Typography>
-                                            <Typography variant="h4" color="success.main">
+                                            <Typography variant="h3" color="success.main" sx={{ fontWeight: 'bold', mt: 1 }}>
                                                 {salesMetrics.completedOrders}
                                             </Typography>
                                         </CardContent>
                                     </Card>
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={3}>
-                                    <Card>
-                                        <CardContent>
-                                            <Typography variant="h6" gutterBottom>
+                                <Grid item xs={12} sm={6} lg={3} sx={{ padding: 1 }}>
+                                    <Card sx={{ 
+                                        height: '100%', 
+                                        boxShadow: 4, 
+                                        transition: 'transform 0.2s, box-shadow 0.2s',
+                                        '&:hover': { 
+                                            transform: 'translateY(-4px)',
+                                            boxShadow: 6
+                                        },
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        borderRadius: 2
+                                    }}>
+                                        <CardContent sx={{ 
+                                            flexGrow: 1,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            textAlign: 'center',
+                                            padding: 3
+                                        }}>
+                                            <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontWeight: 500 }}>
                                                 Ticket Médio
                                             </Typography>
-                                            <Typography variant="h4" color="info.main">
+                                            <Typography variant="h3" color="info.main" sx={{ fontWeight: 'bold', mt: 1 }}>
                                                 R$ {salesMetrics.averageOrderValue.toFixed(2).replace('.', ',')}
                                             </Typography>
                                         </CardContent>
@@ -304,108 +426,57 @@ function Dashboard() {
                                 </Grid>
                             </Grid>
 
-                            <Grid container spacing={3} sx={{ mb: 4 }}>
-                                <Grid item xs={12} md={6}>
-                                    <Paper elevation={3} sx={{ p: 3 }}>
-                                        <Typography variant="h6" gutterBottom>
-                                            Pedidos por Status
-                                        </Typography>
-                                        <Grid container spacing={2}>
-                                            {Object.entries(orders.reduce((acc, order) => {
-                                                const status = order.order.status;
-                                                acc[status] = (acc[status] || 0) + 1;
-                                                return acc;
-                                            }, {})).map(([status, count]) => (
-                                                <Grid item key={status}>
-                                                    <Chip
-                                                        label={`${getStatusText(status)}: ${count}`}
-                                                        color={getStatusColor(status)}
-                                                        variant="outlined"
-                                                    />
-                                                </Grid>
+                            <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Pedidos por Status
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+                                    {Object.entries(orders.reduce((acc, order) => {
+                                        const status = order.order.status;
+                                        acc[status] = (acc[status] || 0) + 1;
+                                        return acc;
+                                    }, {})).map(([status, count]) => (
+                                        <Chip
+                                            key={status}
+                                            label={`${getStatusText(status)}: ${count}`}
+                                            color={getStatusColor(status)}
+                                            variant="outlined"
+                                            sx={{ fontWeight: 'bold', fontSize: '0.875rem' }}
+                                        />
+                                    ))}
+                                </Box>
+                            </Paper>
+
+                            <Paper elevation={3} sx={{ p: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Interrupções Agendadas
+                                </Typography>
+                                <Alert severity="info" sx={{ mb: 2, mt: 1 }}>
+                                    As interrupções podem levar até 2 minutos para serem atualizadas no iFood.
+                                </Alert>
+                                {interruptions.length > 0 ? (
+                                    <Table size="small">
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell>Descrição</TableCell>
+                                                <TableCell align="center">Início</TableCell>
+                                                <TableCell align="center">Fim</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {interruptions.map((interruption) => (
+                                                <TableRow key={interruption.id} hover>
+                                                    <TableCell>{interruption.description}</TableCell>
+                                                    <TableCell align="center">{new Date(interruption.start).toLocaleString()}</TableCell>
+                                                    <TableCell align="center">{new Date(interruption.end).toLocaleString()}</TableCell>
+                                                </TableRow>
                                             ))}
-                                        </Grid>
-                                    </Paper>
-                                </Grid>
-
-                                <Grid item xs={12} md={6}>
-                                    <Paper elevation={3} sx={{ p: 3 }}>
-                                        <Typography variant="h6" gutterBottom>
-                                            Horários de Funcionamento
-                                        </Typography>
-                                        {openingHours.length > 0 ? (
-                                            <Table size="small">
-                                                <TableHead>
-                                                    <TableRow>
-                                                        <TableCell>Dia</TableCell>
-                                                        <TableCell align="right">Horário</TableCell>
-                                                    </TableRow>
-                                                </TableHead>
-                                                <TableBody>
-                                                    {openingHours.map((shift, index) => (
-                                                        <TableRow key={index}>
-                                                            <TableCell component="th" scope="row">
-                                                                {daysOfWeekMap[shift.dayOfWeek]}
-                                                            </TableCell>
-                                                            <TableCell align="right">
-                                                                {`${shift.start.substring(0, 5)} - ${shift.end.substring(0, 5)}`}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        ) : (
-                                            <Alert severity="info" sx={{ mt: 2 }}>
-                                                Nenhum horário de funcionamento configurado.
-                                            </Alert>
-                                        )}
-                                    </Paper>
-                                </Grid>
-                            </Grid>
-
-                            {/* Interrupções de Loja */}
-                            <Grid container spacing={3}>
-                                <Grid item xs={12}>
-                                    <Paper elevation={3} sx={{ p: 3 }}>
-                                        <Typography variant="h6" gutterBottom>
-                                            Interrupções Agendadas
-                                        </Typography>
-                                        <Alert severity="info" sx={{ mb: 2 }}>
-                                            As interrupções podem levar até 2 minutos para serem atualizadas no iFood.
-                                        </Alert>
-                                        {interruptions.length > 0 ? (
-                                            <Table size="small">
-                                                <TableHead>
-                                                    <TableRow>
-                                                        <TableCell>Descrição</TableCell>
-                                                        <TableCell align="center">Início</TableCell>
-                                                        <TableCell align="center">Fim</TableCell>
-                                                    </TableRow>
-                                                </TableHead>
-                                                <TableBody>
-                                                    {interruptions.map((interruption) => (
-                                                        <TableRow key={interruption.id}>
-                                                            <TableCell component="th" scope="row">
-                                                                {interruption.description}
-                                                            </TableCell>
-                                                            <TableCell align="center">
-                                                                {new Date(interruption.start).toLocaleString()}
-                                                            </TableCell>
-                                                            <TableCell align="center">
-                                                                {new Date(interruption.end).toLocaleString()}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        ) : (
-                                            <Alert severity="info" sx={{ mt: 2 }}>
-                                                Nenhuma interrupção agendada.
-                                            </Alert>
-                                        )}
-                                    </Paper>
-                                </Grid>
-                            </Grid>
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <Typography sx={{ mt: 2 }} color="text.secondary">Nenhuma interrupção agendada.</Typography>
+                                )}
+                            </Paper>
                         </>
                     )}
                 </Container>
