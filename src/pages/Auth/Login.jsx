@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
     Box,
     Button,
@@ -12,7 +12,7 @@ import {
 } from '@mui/material'
 import { Visibility, VisibilityOff } from '@mui/icons-material'
 import { validateCnpj } from '../../utils/validation'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import authService from '../../services/authService'
 
 function Login() {
@@ -23,7 +23,23 @@ function Login() {
     const [cnpjError, setCnpjError] = useState('')
     const [loginError, setLoginError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [showTokenExpiredMessage, setShowTokenExpiredMessage] = useState(false)
     const navigate = useNavigate()
+    const location = useLocation()
+
+    useEffect(() => {
+        // Verificar se veio de um redirecionamento por token expirado
+        if (location.state?.tokenExpired) {
+            setShowTokenExpiredMessage(true)
+            // Limpar o state após mostrar a mensagem
+            window.history.replaceState({}, document.title)
+        }
+        
+        // Limpar token expirado do localStorage se existir
+        if (localStorage.getItem('authToken')) {
+            localStorage.removeItem('authToken')
+        }
+    }, [location])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -111,6 +127,12 @@ function Login() {
                     <Typography component="h1" variant="h4" sx={{ mb: 3, fontWeight: 'bold', color: '#ff6b00' }}>
                         Portal iFood
                     </Typography>
+
+                    {showTokenExpiredMessage && (
+                        <Alert severity="info" sx={{ width: '100%', mb: 2 }}>
+                            Sua sessão expirou. Faça login novamente para continuar.
+                        </Alert>
+                    )}
 
                     {loginError && (
                         <Alert severity="error" sx={{ width: '100%', mb: 2 }}>

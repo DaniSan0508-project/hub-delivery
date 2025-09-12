@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 // Hook para gerenciar o status da loja
 export const useStoreStatus = () => {
+    const navigate = useNavigate();
     const queryClient = useQueryClient();
     
     const fetchStoreStatus = async () => {
@@ -16,6 +17,13 @@ export const useStoreStatus = () => {
             const response = await fetch('http://localhost:8090/api/hub/ifood/merchant/status', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+
+            // Verificar se o token expirou
+            if (response.status === 401) {
+                localStorage.removeItem('authToken');
+                navigate('/', { state: { tokenExpired: true } });
+                return null;
+            }
 
             if (response.ok) {
                 const data = await response.json();

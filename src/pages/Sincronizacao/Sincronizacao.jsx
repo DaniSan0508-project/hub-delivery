@@ -84,22 +84,16 @@ function Sincronizacao() {
             setLoading(true);
             setError(null);
 
-            const response = await fetch('http://localhost:8090/api/erp/sync/status', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setSyncData(data);
-            } else {
-                const errorData = await response.json();
-                setError(errorData.message || 'Erro ao carregar status de sincronização');
-            }
+            const syncData = await productService.getSyncStatus(token);
+            setSyncData(syncData);
         } catch (error) {
             console.error('Error fetching sync data:', error);
+            // Verificar se é um erro de token expirado
+            if (error.message && error.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
+            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
         } finally {
             setLoading(false);
         }
@@ -179,6 +173,11 @@ function Sincronizacao() {
             fetchSyncData(token);
         } catch (error) {
             console.error('Error syncing products:', error);
+            // Verificar se é um erro de token expirado
+            if (error.message && error.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
             setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
         } finally {
             setLoading(false);

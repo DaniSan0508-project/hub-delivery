@@ -87,6 +87,11 @@ function Pedidos() {
             setOrders(transformedOrders);
         } catch (error) {
             console.error('Error fetching orders:', error);
+            // Verificar se é um erro de token expirado
+            if (error.message && error.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
             setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
         } finally {
             setLoading(false);

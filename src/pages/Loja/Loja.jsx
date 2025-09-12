@@ -101,13 +101,18 @@ function Loja() {
         };
     }, [navigate]);
 
-    const fetchMerchantStatus = async (token) => {
+        const fetchMerchantStatus = async (token) => {
         try {
             setStatusLoading(true);
             const merchantStatus = await storeService.getMerchantStatus(token);
             setMerchantStatus(merchantStatus);
         } catch (error) {
             console.error('Error fetching merchant status:', error);
+            // Verificar se é um erro de token expirado
+            if (error.message && error.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
             setError(error.message || 'Erro de conexão ao carregar status do merchant');
         } finally {
             setStatusLoading(false);
@@ -121,6 +126,11 @@ function Loja() {
             setCurrentStoreStatus(storeStatus.status);
         } catch (error) {
             console.error('Error fetching store status:', error);
+            // Verificar se é um erro de token expirado
+            if (error.message && error.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
             setStoreStatusMessage({ severity: 'error', message: error.message || 'Erro de conexão ao carregar o status da loja.' });
         } finally {
             setStoreStatusLoading(false);
@@ -138,6 +148,11 @@ function Loja() {
             setCurrentStoreStatus(status);
         } catch (error) {
             console.error('Error updating store status:', error);
+            // Verificar se é um erro de token expirado
+            if (error.message && error.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
             setStoreStatusMessage({ severity: 'error', message: error.message || 'Erro de conexão. Não foi possível atualizar o status.' });
         } finally {
             setStoreStatusLoading(false);
@@ -151,6 +166,11 @@ function Loja() {
             setInterruptionsList(interruptions);
         } catch (error) {
             console.error('Error fetching interruptions:', error);
+            // Verificar se é um erro de token expirado
+            if (error.message && error.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
             setError(error.message || 'Erro de conexão ao carregar interrupções.');
         } finally {
             setInterruptionsLoading(false);
@@ -175,6 +195,11 @@ function Loja() {
             setOpeningHoursData(updatedOpeningHours);
         } catch (error) {
             console.error('Erro de conexão ao carregar horários:', error);
+            // Verificar se é um erro de token expirado
+            if (error.message && error.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
         } finally {
             setOpeningHoursLoading(false);
         }
@@ -196,6 +221,12 @@ function Loja() {
             fetchInterruptions(token);
         } catch (error) {
             console.error('Error creating interruption:', error);
+            
+            // Verificar se é um erro de token expirado
+            if (error.message && error.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
             
             let errorMessage = error.message || 'Erro de conexão. Não foi possível criar a interrupção.';
             setInterruptionMessage({
@@ -219,6 +250,12 @@ function Loja() {
             fetchInterruptions(token);
         } catch (error) {
             console.error('Error deleting interruption:', error);
+            
+            // Verificar se é um erro de token expirado
+            if (error.message && error.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
             
             let errorMessage = error.message || 'Erro de conexão. Não foi possível excluir a interrupção.';
             setInterruptionMessage({
@@ -250,6 +287,12 @@ function Loja() {
             });
         } catch (error) {
             console.error('Error updating opening hours:', error);
+            
+            // Verificar se é um erro de token expirado
+            if (error.message && error.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
             
             let errorMessage = error.message || 'Erro de conexão. Não foi possível atualizar os horários.';
             setOpeningHoursMessage({

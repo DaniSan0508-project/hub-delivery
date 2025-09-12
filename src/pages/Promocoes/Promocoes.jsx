@@ -70,7 +70,14 @@ function Promocoes() {
             return await promotionService.getPromotions(token);
         },
         staleTime: 1000 * 60 * 5, // 5 minutes
-        cacheTime: 1000 * 60 * 10, // 10 minutes
+        cacheTime: 1000 * 60 * 10, // 10 minutes,
+        onError: (error) => {
+            // Verificar se é um erro de token expirado
+            if (error.message && error.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
+        }
     });
 
     // Calcular paginação no frontend
@@ -88,6 +95,11 @@ function Promocoes() {
             setOpenDetailDialog(true);
         } catch (err) {
             console.error('Error fetching promotion details:', err);
+            // Verificar se é um erro de token expirado
+            if (err.message && err.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
         }
     };
 
@@ -477,6 +489,11 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
                 quantityToPay: ''
             });
         } catch (err) {
+            // Verificar se é um erro de token expirado
+            if (err.message && err.message.includes('Sessão expirada')) {
+                // O serviço já lidou com o redirecionamento
+                return;
+            }
             setError(err.message || 'Erro ao criar promoção');
         } finally {
             setLoading(false);

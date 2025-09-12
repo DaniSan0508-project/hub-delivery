@@ -22,6 +22,12 @@ class ApiService {
             headers
         });
         
+        // Verificar se o token expirou
+        if (response.status === 401) {
+            this.handleTokenExpiration();
+            throw new Error('Sessão expirada. Faça login novamente.');
+        }
+        
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
@@ -41,6 +47,12 @@ class ApiService {
             headers,
             body: JSON.stringify(data)
         });
+        
+        // Verificar se o token expirou
+        if (response.status === 401) {
+            this.handleTokenExpiration();
+            throw new Error('Sessão expirada. Faça login novamente.');
+        }
         
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -62,6 +74,12 @@ class ApiService {
             body: JSON.stringify(data)
         });
         
+        // Verificar se o token expirou
+        if (response.status === 401) {
+            this.handleTokenExpiration();
+            throw new Error('Sessão expirada. Faça login novamente.');
+        }
+        
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
@@ -79,12 +97,31 @@ class ApiService {
             headers
         });
         
+        // Verificar se o token expirou
+        if (response.status === 401) {
+            this.handleTokenExpiration();
+            throw new Error('Sessão expirada. Faça login novamente.');
+        }
+        
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
         
         return await response.json();
+    }
+
+    // Método para lidar com token expirado
+    handleTokenExpiration() {
+        // Remover token do localStorage
+        localStorage.removeItem('authToken');
+        
+        // Redirecionar para tela de login após um breve delay
+        setTimeout(() => {
+            if (typeof window !== 'undefined' && window.location) {
+                window.location.href = '/';
+            }
+        }, 100);
     }
 }
 
