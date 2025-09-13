@@ -14,37 +14,118 @@ import {
   ListItemSecondaryAction,
   Divider,
   CircularProgress,
-  TextField
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import purchaseService from '../services/purchaseService';
+import orderService from '../services/orderService';
+
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'Placed':
+      return 'info';
+    case 'Confirmed':
+      return 'success';
+    case 'SPS':
+    case 'Separation Started':
+      return 'warning';
+    case 'SPE':
+      return 'info';
+    case 'Dispatched':
+      return 'default';
+    case 'Concluded':
+      return 'default';
+    default:
+      return 'default';
+  }
+};
+
+const getStatusText = (status) => {
+  switch (status) {
+    case 'Placed':
+      return 'Recebido';
+    case 'Confirmed':
+      return 'Confirmado';
+    case 'SPS':
+    case 'Separation Started':
+      return 'Separação iniciada';
+    case 'SPE':
+      return 'Separação finalizada';
+    case 'Dispatched':
+      return 'Despachado';
+    case 'Concluded':
+      return 'Concluído';
+    default:
+      return status;
+  }
+};
 
 const ManagePurchasesModal = ({ open, onClose, orderId }) => {
   const [products, setProducts] = useState([]);
+  const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
+    const loadOrderDetails = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const orderData = await orderService.getOrderDetails(orderId, token);
+        setOrder(orderData);
+      } catch (err) {
+        console.error('Error loading order details:', err);
+        setError(err.message || 'Erro ao carregar detalhes do pedido');
+      }
+    };
+
+    const loadProducts = async (search = '') => {
+      try {
+        setLoading(true);
+        setError(null);
+        const token = localStorage.getItem('authToken');
+        const productsData = await purchaseService.getProducts(token, search);
+        setProducts(productsData.data || []);
+      } catch (err) {
+        console.error('Error loading products:', err);
+        setError(err.message || 'Erro ao carregar produtos');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (open) {
       loadProducts();
+      loadOrderDetails();
     }
-  }, [open]);
+  }, [open, orderId]);
 
-  const loadProducts = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const token = localStorage.getItem('authToken');
-      const productsData = await purchaseService.getProducts(token);
-      setProducts(productsData.products || []);
-    } catch (err) {
-      console.error('Error loading products:', err);
-      setError(err.message || 'Erro ao carregar produtos');
-    } finally {
-      setLoading(false);
-    }
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    const loadProducts = async (search = '') => {
+      try {
+        setLoading(true);
+        setError(null);
+        const token = localStorage.getItem('authToken');
+        const productsData = await purchaseService.getProducts(token, search);
+        setProducts(productsData.data || []);
+      } catch (err) {
+        console.error('Error loading products:', err);
+        setError(err.message || 'Erro ao carregar produtos');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProducts(term);
   };
 
   const handleAddToPurchase = async (product) => {
@@ -58,11 +139,24 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
         product_id: product.id,
         name: product.name,
         quantity: 1, // Default quantity
-        unit_price: product.price
+        unit_price: product.value
       };
       
       await purchaseService.addProductToPurchase(orderId, productData, token);
       setSuccess(`Produto "${product.name}" adicionado à compra com sucesso!`);
+      
+      // Reload order details to show updated items
+      const loadOrderDetails = async () => {
+        try {
+          const token = localStorage.getItem('authToken');
+          const orderData = await orderService.getOrderDetails(orderId, token);
+          setOrder(orderData);
+        } catch (err) {
+          console.error('Error loading order details:', err);
+          setError(err.message || 'Erro ao carregar detalhes do pedido');
+        }
+      };
+      await loadOrderDetails();
       
       // Clear success message after 3 seconds
       setTimeout(() => {
@@ -76,10 +170,16 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
     }
   };
 
-  const filteredProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.ean && product.ean.includes(searchTerm))
-  );
+  // Calculate total order value
+  const calculateOrderTotal = (items) => {
+    if (!items || !Array.isArray(items)) return 0;
+    return items.reduce((total, item) => total + (item.unit_price * item.quantity), 0);
+  };
+
+  // Get the first order from the array
+  const orderData = order && order.orders && Array.isArray(order.orders) && order.orders.length > 0 
+    ? order.orders[0] 
+    : (order && Array.isArray(order) && order.length > 0 ? order[0] : null);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -98,11 +198,73 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
         )}
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+          {/* Order Info */}
+          {orderData && (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Typography variant="h6">
+                  Cliente: {orderData.consumer?.name || 'Não informado'}
+                </Typography>
+                <Chip
+                  label={getStatusText(orderData.order?.status)}
+                  color={getStatusColor(orderData.order?.status)}
+                  size="small"
+                  sx={{ mt: 1 }}
+                />
+              </Box>
+              <Typography variant="h6">
+                Total: R$ {calculateOrderTotal(orderData.order?.items).toFixed(2).replace('.', ',')}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Order Items */}
+          {orderData && orderData.order?.items && orderData.order.items.length > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Itens do Pedido
+              </Typography>
+              
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Produto</TableCell>
+                      <TableCell>EAN</TableCell>
+                      <TableCell align="right">Quantidade</TableCell>
+                      <TableCell align="right">Preço Unitário</TableCell>
+                      <TableCell align="right">Total</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {orderData.order.items.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          {item.name || `Item #${index + 1}`}
+                        </TableCell>
+                        <TableCell>
+                          {item.ean || 'Não informado'}
+                        </TableCell>
+                        <TableCell align="right">{item.quantity}</TableCell>
+                        <TableCell align="right">
+                          R$ {parseFloat(item.unit_price).toFixed(2).replace('.', ',')}
+                        </TableCell>
+                        <TableCell align="right">
+                          R$ {(item.unit_price * item.quantity).toFixed(2).replace('.', ',')}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+
           {/* Search Field */}
           <TextField
             label="Buscar produtos"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             placeholder="Pesquise por nome ou EAN"
             fullWidth
           />
@@ -119,8 +281,8 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
               </Box>
             ) : (
               <List>
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product) => (
+                {products.length > 0 ? (
+                  products.map((product) => (
                     <div key={product.id}>
                       <ListItem>
                         <ListItemText
@@ -128,8 +290,8 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
                           secondary={
                             <>
                               <Typography component="span" variant="body2">
-                                Preço: R$ {parseFloat(product.price).toFixed(2).replace('.', ',')} | 
-                                EAN: {product.ean || 'Não informado'} | 
+                                Preço: R$ {parseFloat(product.value).toFixed(2).replace('.', ',')} | 
+                                EAN: {product.barcode || 'Não informado'} | 
                                 Código: {product.id}
                               </Typography>
                             </>

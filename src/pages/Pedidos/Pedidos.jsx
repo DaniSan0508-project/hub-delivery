@@ -26,17 +26,17 @@ import {
     DialogActions,
     Modal
 } from '@mui/material';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu as MenuIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { Menu as MenuIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import Sidebar from '../../components/Sidebar';
 import orderService from '../../services/orderService';
 import ManagePurchasesModal from '../../components/ManagePurchasesModal';
+import OrderDetailsModal from '../../components/OrderDetailsModal';
 
 const drawerWidth = 240;
 
 function Pedidos() {
     const navigate = useNavigate();
-    const location = useLocation();
     const [user, setUser] = useState(null);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [orders, setOrders] = useState([]);
@@ -44,6 +44,7 @@ function Pedidos() {
     const [error, setError] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState({ open: false, orderId: null, action: null, actionLabel: '' });
     const [managePurchasesModal, setManagePurchasesModal] = useState({ open: false, orderId: null });
+    const [orderDetailsModal, setOrderDetailsModal] = useState({ open: false, orderId: null });
 
     useEffect(() => {
         let isMounted = true;
@@ -88,8 +89,8 @@ function Pedidos() {
                 return;
             }
             
-            // Verificar se ordersData.orders existe e é um array
-            const ordersArray = ordersData.orders || [];
+            // Verificar se ordersData.data existe (nova estrutura da API)
+            const ordersArray = ordersData.data || ordersData.orders || [];
             if (!Array.isArray(ordersArray)) {
                 console.error('Invalid orders data structure:', ordersData);
                 setOrders([]);
@@ -206,6 +207,14 @@ function Pedidos() {
 
     const handleCloseManagePurchases = () => {
         setManagePurchasesModal({ open: false, orderId: null });
+    };
+
+    const handleViewOrderDetails = (orderId) => {
+        setOrderDetailsModal({ open: true, orderId });
+    };
+
+    const handleCloseOrderDetails = () => {
+        setOrderDetailsModal({ open: false, orderId: null });
     };
 
     const handleDrawerToggle = () => {
@@ -421,6 +430,15 @@ function Pedidos() {
                                                         Nenhuma ação disponível
                                                     </Button>
                                                 )}
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        startIcon={<VisibilityIcon />}
+                                                        onClick={() => handleViewOrderDetails(order.id)}
+                                                        sx={{ ml: 1 }}
+                                                    >
+                                                        Ver Detalhes
+                                                    </Button>
                                                         </TableCell>
                                                     </TableRow>
                                                 );
@@ -462,6 +480,13 @@ function Pedidos() {
                     open={managePurchasesModal.open} 
                     onClose={handleCloseManagePurchases} 
                     orderId={managePurchasesModal.orderId}
+                />
+
+                {/* Order Details Modal */}
+                <OrderDetailsModal 
+                    open={orderDetailsModal.open} 
+                    onClose={handleCloseOrderDetails} 
+                    orderId={orderDetailsModal.orderId}
                 />
             </Box>
         </Box>

@@ -4,41 +4,50 @@ import api from './api';
 class OrderService {
     async getOrders(token) {
         console.log('OrderService.getOrders called with token:', token);
-        // Usar baseERPUrl que já inclui /api/erp
-        const result = await api.get(`${api.baseERPUrl}/orders`, token);
+        // Usar a rota com /erp para buscar pedidos
+        const result = await api.get('http://localhost:8090/api/erp/orders', token);
         console.log('OrderService.getOrders result:', result);
         return result;
     }
 
     async getOrderDetails(orderId, token) {
-        return await api.get(`${api.baseERPUrl}/orders/${orderId}`, token);
+        // Usar a rota com /erp e query parameter para buscar detalhes do pedido
+        console.log('OrderService.getOrderDetails called with orderId:', orderId);
+        const url = `http://localhost:8090/api/erp/orders?order_id=${orderId}`;
+        console.log('OrderService.getOrderDetails calling URL:', url);
+        const result = await api.get(url, token);
+        console.log('OrderService.getOrderDetails result:', result);
+        return result;
     }
 
     async updateOrderStatus(orderId, status, token) {
-        // Corrigir para usar o endpoint correto sem /erp adicional
+        // Usar a rota sem /erp para atualizar status
         return await api.put(`http://localhost:8090/api/orders/${orderId}/status`, { status }, token);
     }
 
     async startSeparation(orderId, token) {
-        // Corrigir para usar o endpoint correto sem /erp adicional
+        // Usar a rota sem /erp para iniciar separação
         return await api.post(`http://localhost:8090/api/orders/${orderId}/start-separation`, {}, token);
     }
 
     async endSeparation(orderId, token) {
-        // Corrigir para usar o endpoint correto sem /erp adicional
+        // Usar a rota sem /erp para finalizar separação
         return await api.post(`http://localhost:8090/api/orders/${orderId}/end-separation`, {}, token);
     }
 
     async addOrderItem(orderId, itemData, token) {
-        return await api.post(`${api.baseERPUrl}/orders/${orderId}/items`, itemData, token);
+        // Usar a rota sem /erp para adicionar item
+        return await api.post(`http://localhost:8090/api/orders/${orderId}/items`, itemData, token);
     }
 
     async updateOrderItem(orderId, itemId, itemData, token) {
-        return await api.put(`${api.baseERPUrl}/orders/${orderId}/items/${itemId}`, itemData, token);
+        // Usar a rota sem /erp para atualizar item
+        return await api.put(`http://localhost:8090/api/orders/${orderId}/items/${itemId}`, itemData, token);
     }
 
     async deleteOrderItem(orderId, itemId, token) {
-        return await api.delete(`${api.baseERPUrl}/orders/${orderId}/items/${itemId}`, token);
+        // Usar a rota sem /erp para deletar item
+        return await api.delete(`http://localhost:8090/api/orders/${orderId}/items/${itemId}`, token);
     }
 }
 
