@@ -36,7 +36,7 @@ class OrderService {
     }
 
     async addOrderItem(orderId, itemData, token) {
-        // Usar a rota sem /erp para adicionar item
+        // Usar a nova rota para adicionar item ao pedido
         return await api.post(`http://localhost:8090/api/orders/${orderId}/items`, itemData, token);
     }
 

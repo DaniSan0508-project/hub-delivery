@@ -135,14 +135,30 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
       setSuccess(null);
       const token = localStorage.getItem('authToken');
       
-      const productData = {
-        product_id: product.id,
-        name: product.name,
+      // Obter o ID do pedido no nosso sistema (não o ID do iFood)
+      const orderData = order && order.orders && Array.isArray(order.orders) && order.orders.length > 0 
+        ? order.orders[0] 
+        : (order && Array.isArray(order) && order.length > 0 ? order[0] : null);
+      
+      console.log('OrderData for ID extraction:', orderData);
+      
+      // Verificar onde está o ID correto do nosso sistema
+      const internalOrderId = orderData?.order?.id || orderId;
+      
+      console.log('Using internalOrderId:', internalOrderId);
+      
+      if (!internalOrderId) {
+        throw new Error('Não foi possível obter o ID do pedido');
+      }
+      
+      // Usar a nova estrutura de dados para adicionar item ao pedido
+      const itemData = {
+        item_id: product.id,
         quantity: 1, // Default quantity
-        unit_price: product.value
+        ean: product.barcode || null
       };
       
-      await purchaseService.addProductToPurchase(orderId, productData, token);
+      await orderService.addOrderItem(internalOrderId, itemData, token);
       setSuccess(`Produto "${product.name}" adicionado à compra com sucesso!`);
       
       // Reload order details to show updated items

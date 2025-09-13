@@ -9,10 +9,6 @@ class PurchaseService {
         }
         return await api.get(url, token);
     }
-
-    async addProductToPurchase(orderId, productData, token) {
-        return await api.post(`${api.baseERPUrl}/orders/${orderId}/purchases`, productData, token);
-    }
 }
 
 export default new PurchaseService();
