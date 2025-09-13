@@ -23,12 +23,14 @@ import {
     DialogTitle,
     DialogContent,
     DialogContentText,
-    DialogActions
+    DialogActions,
+    Modal
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu as MenuIcon } from '@mui/icons-material';
 import Sidebar from '../../components/Sidebar';
 import orderService from '../../services/orderService';
+import ManagePurchasesModal from '../../components/ManagePurchasesModal';
 
 const drawerWidth = 240;
 
@@ -41,6 +43,7 @@ function Pedidos() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState({ open: false, orderId: null, action: null, actionLabel: '' });
+    const [managePurchasesModal, setManagePurchasesModal] = useState({ open: false, orderId: null });
 
     useEffect(() => {
         let isMounted = true;
@@ -73,17 +76,50 @@ function Pedidos() {
         try {
             setLoading(true);
             setError(null);
+            console.log('Fetching orders with token:', token);
 
             const ordersData = await orderService.getOrders(token);
+            console.log('Received orders data:', ordersData);
+            
+            // Verificar se ordersData existe
+            if (!ordersData) {
+                console.error('No orders data received');
+                setOrders([]);
+                return;
+            }
+            
+            // Verificar se ordersData.orders existe e é um array
+            const ordersArray = ordersData.orders || [];
+            if (!Array.isArray(ordersArray)) {
+                console.error('Invalid orders data structure:', ordersData);
+                setOrders([]);
+                return;
+            }
+            
+            console.log('Number of orders received:', ordersArray.length);
             
             // Transform the API response to match our table structure
-            const transformedOrders = ordersData.orders.map(order => ({
-                id: order.order.id,
-                customer: order.consumer.name,
-                status: order.order.status || 'CONFIRMED', // Default to 'CONFIRMED' if status is not provided
-                total: order.order.items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0),
-                createdAt: 'Horário não disponível' // API doesn't provide this yet
-            }));
+            const transformedOrders = ordersArray.map((order, index) => {
+                console.log(`Processing order ${index}:`, order);
+                
+                // Verificar se a estrutura do pedido é válida
+                if (!order || !order.order || !order.consumer) {
+                    console.error(`Invalid order structure at index ${index}:`, order);
+                    return null;
+                }
+                
+                // Verificar se order.order.items existe
+                const items = order.order.items || [];
+                return {
+                    id: order.order.id,
+                    customer: order.consumer.name,
+                    status: order.order.status || 'CONFIRMED', // Default to 'CONFIRMED' if status is not provided
+                    total: items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0),
+                    createdAt: 'Horário não disponível' // API doesn't provide this yet
+                };
+            }).filter(order => order !== null); // Remover pedidos inválidos
+            
+            console.log('Transformed orders:', transformedOrders);
             setOrders(transformedOrders);
         } catch (error) {
             console.error('Error fetching orders:', error);
@@ -164,6 +200,14 @@ function Pedidos() {
         setConfirmDialog({ open: false, orderId: null, action: null, actionLabel: '' });
     };
 
+    const handleManagePurchasesClick = (orderId) => {
+        setManagePurchasesModal({ open: true, orderId });
+    };
+
+    const handleCloseManagePurchases = () => {
+        setManagePurchasesModal({ open: false, orderId: null });
+    };
+
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
     };
@@ -180,6 +224,7 @@ function Pedidos() {
             case 'Confirmed':
                 return 'success';
             case 'SPS':
+            case 'Separation Started':
                 return 'warning';
             case 'SPE':
                 return 'info';
@@ -199,6 +244,7 @@ function Pedidos() {
             case 'Confirmed':
                 return 'Confirmado';
             case 'SPS':
+            case 'Separation Started':
                 return 'Separação iniciada';
             case 'SPE':
                 return 'Separação finalizada';
@@ -218,7 +264,11 @@ function Pedidos() {
             case 'Confirmed':
                 return [{ action: 'startSeparation', label: 'Iniciar Separação', color: 'primary' }];
             case 'SPS':
-                return [{ action: 'endSeparation', label: 'Finalizar Separação', color: 'secondary' }];
+            case 'Separation Started':
+                return [
+                    { action: 'endSeparation', label: 'Finalizar Separação', color: 'secondary' },
+                    { action: 'managePurchases', label: 'Gerenciar Compras', color: 'info' }
+                ];
             case 'SPE':
                 return [{ action: 'dispatch', label: 'Despachar', color: 'success' }];
             default:
@@ -348,23 +398,29 @@ function Pedidos() {
                                                         </TableCell>
                                                         <TableCell>
                                                             {actions.length > 0 ? (
-                                                                actions.map((action, index) => (
-                                                                    <Button
-                                                                        key={index}
-                                                                        size="small"
-                                                                        variant="contained"
-                                                                        color={action.color}
-                                                                        onClick={() => handleActionClick(order.id, action.action, action.label)}
-                                                                        sx={{ ml: index > 0 ? 1 : 0 }}
-                                                                    >
-                                                                        {action.label}
-                                                                    </Button>
-                                                                ))
-                                                            ) : (
-                                                                <Button size="small" variant="outlined" disabled>
-                                                                    Nenhuma ação disponível
-                                                                </Button>
-                                                            )}
+                                                    actions.map((action, index) => (
+                                                        <Button
+                                                            key={index}
+                                                            size="small"
+                                                            variant="contained"
+                                                            color={action.color}
+                                                            onClick={() => {
+                                                                if (action.action === 'managePurchases') {
+                                                                    handleManagePurchasesClick(order.id);
+                                                                } else {
+                                                                    handleActionClick(order.id, action.action, action.label);
+                                                                }
+                                                            }}
+                                                            sx={{ ml: index > 0 ? 1 : 0 }}
+                                                        >
+                                                            {action.label}
+                                                        </Button>
+                                                    ))
+                                                ) : (
+                                                    <Button size="small" variant="outlined" disabled>
+                                                        Nenhuma ação disponível
+                                                    </Button>
+                                                )}
                                                         </TableCell>
                                                     </TableRow>
                                                 );
@@ -400,6 +456,13 @@ function Pedidos() {
                         </Button>
                     </DialogActions>
                 </Dialog>
+
+                {/* Manage Purchases Modal */}
+                <ManagePurchasesModal 
+                    open={managePurchasesModal.open} 
+                    onClose={handleCloseManagePurchases} 
+                    orderId={managePurchasesModal.orderId}
+                />
             </Box>
         </Box>
     );
