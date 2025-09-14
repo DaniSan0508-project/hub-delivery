@@ -23,14 +23,12 @@ import {
     DialogTitle,
     DialogContent,
     DialogContentText,
-    DialogActions,
-    Modal
+    DialogActions
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { Menu as MenuIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import Sidebar from '../../components/Sidebar';
 import orderService from '../../services/orderService';
-import ManagePurchasesModal from '../../components/ManagePurchasesModal';
 import OrderDetailsModal from '../../components/OrderDetailsModal';
 
 const drawerWidth = 240;
@@ -43,7 +41,6 @@ function Pedidos() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState({ open: false, orderId: null, action: null, actionLabel: '' });
-    const [managePurchasesModal, setManagePurchasesModal] = useState({ open: false, orderId: null });
     const [orderDetailsModal, setOrderDetailsModal] = useState({ open: false, orderId: null });
 
     useEffect(() => {
@@ -147,14 +144,14 @@ function Pedidos() {
         }
     };
 
-    const startSeparation = async (orderId) => {
+    const dispatchOrder = async (orderId) => {
         try {
             const token = localStorage.getItem('authToken');
-            await orderService.startSeparation(orderId, token);
-            // Refresh orders after starting separation
+            await orderService.dispatchOrder(orderId, token);
+            // Refresh orders after dispatch
             fetchOrders(token);
         } catch (error) {
-            console.error('Error starting separation:', error);
+            console.error('Error dispatching order:', error);
             setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
         }
     };
@@ -167,6 +164,42 @@ function Pedidos() {
             fetchOrders(token);
         } catch (error) {
             console.error('Error ending separation:', error);
+            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
+        }
+    };
+
+    const startSeparation = async (orderId) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            await orderService.startSeparation(orderId, token);
+            // Refresh orders after starting separation
+            fetchOrders(token);
+        } catch (error) {
+            console.error('Error starting separation:', error);
+            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
+        }
+    };
+
+    const arriveAtDestination = async (orderId) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            await orderService.arriveAtDestination(orderId, token);
+            // Refresh orders after arriving at destination
+            fetchOrders(token);
+        } catch (error) {
+            console.error('Error arriving at destination:', error);
+            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
+        }
+    };
+
+    const readyToPickup = async (orderId) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            await orderService.readyToPickup(orderId, token);
+            // Refresh orders after marking as ready to pickup
+            fetchOrders(token);
+        } catch (error) {
+            console.error('Error marking order as ready to pickup:', error);
             setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
         }
     };
@@ -186,8 +219,14 @@ function Pedidos() {
             case 'endSeparation':
                 await endSeparation(orderId);
                 break;
+            case 'readyToPickup':
+                await readyToPickup(orderId);
+                break;
             case 'dispatch':
-                await updateOrderStatus(orderId, 'DISPATCHED');
+                await dispatchOrder(orderId);
+                break;
+            case 'arriveAtDestination':
+                await arriveAtDestination(orderId);
                 break;
             case 'confirm':
                 await updateOrderStatus(orderId, 'CONFIRMED');
@@ -199,14 +238,6 @@ function Pedidos() {
 
     const handleCloseDialog = () => {
         setConfirmDialog({ open: false, orderId: null, action: null, actionLabel: '' });
-    };
-
-    const handleManagePurchasesClick = (orderId) => {
-        setManagePurchasesModal({ open: true, orderId });
-    };
-
-    const handleCloseManagePurchases = () => {
-        setManagePurchasesModal({ open: false, orderId: null });
     };
 
     const handleViewOrderDetails = (orderId) => {
@@ -236,11 +267,16 @@ function Pedidos() {
             case 'Separation Started':
                 return 'warning';
             case 'SPE':
+            case 'Separation Ended':
                 return 'info';
+            case 'READY_TO_PICKUP':
+            case 'Ready to Pickup':
+                return 'warning';
             case 'Dispatched':
                 return 'default';
-            case 'Concluded':
-                return 'default';
+            case 'Arrived':
+            case 'Arrived at Destination':
+                return 'success';
             default:
                 return 'default';
         }
@@ -256,11 +292,16 @@ function Pedidos() {
             case 'Separation Started':
                 return 'Separação iniciada';
             case 'SPE':
+            case 'Separation Ended':
                 return 'Separação finalizada';
+            case 'READY_TO_PICKUP':
+            case 'Ready to Pickup':
+                return 'Pronto para Retirada';
             case 'Dispatched':
                 return 'Despachado';
-            case 'Concluded':
-                return 'Concluído';
+            case 'Arrived':
+            case 'Arrived at Destination':
+                return 'Chegou ao Destino';
             default:
                 return status;
         }
@@ -274,12 +315,15 @@ function Pedidos() {
                 return [{ action: 'startSeparation', label: 'Iniciar Separação', color: 'primary' }];
             case 'SPS':
             case 'Separation Started':
-                return [
-                    { action: 'endSeparation', label: 'Finalizar Separação', color: 'secondary' },
-                    { action: 'managePurchases', label: 'Gerenciar Compras', color: 'info' }
-                ];
+                return [{ action: 'endSeparation', label: 'Finalizar Separação', color: 'secondary' }];
             case 'SPE':
+            case 'Separation Ended':
+                return [{ action: 'readyToPickup', label: 'Pronto para Retirada', color: 'warning' }];
+            case 'READY_TO_PICKUP':
+            case 'Ready to Pickup':
                 return [{ action: 'dispatch', label: 'Despachar', color: 'success' }];
+            case 'Dispatched':
+                return [{ action: 'arriveAtDestination', label: 'Chegou ao Destino', color: 'info' }];
             default:
                 return [];
         }
@@ -414,11 +458,7 @@ function Pedidos() {
                                                             variant="contained"
                                                             color={action.color}
                                                             onClick={() => {
-                                                                if (action.action === 'managePurchases') {
-                                                                    handleManagePurchasesClick(order.id);
-                                                                } else {
-                                                                    handleActionClick(order.id, action.action, action.label);
-                                                                }
+                                                                handleActionClick(order.id, action.action, action.label);
                                                             }}
                                                             sx={{ ml: index > 0 ? 1 : 0 }}
                                                         >
@@ -474,13 +514,6 @@ function Pedidos() {
                         </Button>
                     </DialogActions>
                 </Dialog>
-
-                {/* Manage Purchases Modal */}
-                <ManagePurchasesModal 
-                    open={managePurchasesModal.open} 
-                    onClose={handleCloseManagePurchases} 
-                    orderId={managePurchasesModal.orderId}
-                />
 
                 {/* Order Details Modal */}
                 <OrderDetailsModal 

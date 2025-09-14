@@ -40,6 +40,7 @@ const getStatusColor = (status) => {
     case 'Separation Started':
       return 'warning';
     case 'SPE':
+    case 'Separation Ended':
       return 'info';
     case 'Dispatched':
       return 'default';
@@ -60,6 +61,7 @@ const getStatusText = (status) => {
     case 'Separation Started':
       return 'Separação iniciada';
     case 'SPE':
+    case 'Separation Ended':
       return 'Separação finalizada';
     case 'Dispatched':
       return 'Despachado';

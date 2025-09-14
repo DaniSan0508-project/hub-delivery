@@ -140,8 +140,10 @@ function Dashboard() {
         switch (status) {
             case 'Placed': return 'info';
             case 'Confirmed': return 'success';
-            case 'SPS': return 'warning';
-            case 'SPE': return 'info';
+            case 'SPS':
+            case 'Separation Started': return 'warning';
+            case 'SPE':
+            case 'Separation Ended': return 'info';
             case 'Dispatched': return 'primary';
             case 'Concluded': return 'default';
             default: return 'default';
@@ -152,8 +154,10 @@ function Dashboard() {
         switch (status) {
             case 'Placed': return 'Recebido';
             case 'Confirmed': return 'Confirmado';
-            case 'SPS': return 'Separação iniciada';
-            case 'SPE': return 'Separação finalizada';
+            case 'SPS':
+            case 'Separation Started': return 'Separação iniciada';
+            case 'SPE':
+            case 'Separation Ended': return 'Separação finalizada';
             case 'Dispatched': return 'Despachado';
             case 'Concluded': return 'Concluído';
             default: return status;
@@ -202,7 +206,9 @@ function Dashboard() {
                     variant="temporary"
                     open={mobileOpen}
                     onClose={handleDrawerToggle}
-                    ModalProps={{ keepMounted: true }}
+                    ModalProps={{
+                        keepMounted: true, // Better open performance on mobile.
+                    }}
                     sx={{
                         display: { xs: 'block', sm: 'none' },
                         '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },

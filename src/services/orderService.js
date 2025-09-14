@@ -35,6 +35,21 @@ class OrderService {
         return await api.post(`http://localhost:8090/api/orders/${orderId}/end-separation`, {}, token);
     }
 
+    async readyToPickup(orderId, token) {
+        // Nova rota para marcar o pedido como pronto para retirada
+        return await api.post(`http://localhost:8090/api/orders/${orderId}/ready-to-pickup`, {}, token);
+    }
+
+    async dispatchOrder(orderId, token) {
+        // Usar a rota sem /erp para despachar o pedido
+        return await api.post(`http://localhost:8090/api/orders/${orderId}/dispatch`, {}, token);
+    }
+
+    async arriveAtDestination(orderId, token) {
+        // Nova rota para indicar chegada ao destino
+        return await api.post(`http://localhost:8090/api/orders/${orderId}/arrive-at-destination`, {}, token);
+    }
+
     async addOrderItem(orderId, itemData, token) {
         // Usar a nova rota para adicionar item ao pedido
         return await api.post(`http://localhost:8090/api/orders/${orderId}/items`, itemData, token);
