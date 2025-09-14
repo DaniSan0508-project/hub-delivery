@@ -25,7 +25,7 @@ import {
   Chip
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
-import purchaseService from '../services/purchaseService';
+import sellableItemsService from '../services/sellableItemsService';
 import orderService from '../services/orderService';
 
 const getStatusColor = (status) => {
@@ -69,7 +69,7 @@ const getStatusText = (status) => {
 };
 
 const ManagePurchasesModal = ({ open, onClose, orderId }) => {
-  const [products, setProducts] = useState([]);
+  const [sellableItems, setSellableItems] = useState([]);
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -88,78 +88,93 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
       }
     };
 
-    const loadProducts = async (search = '') => {
+    const loadSellableItems = async (search = '') => {
       try {
         setLoading(true);
         setError(null);
         const token = localStorage.getItem('authToken');
-        const productsData = await purchaseService.getProducts(token, search);
-        setProducts(productsData.data || []);
+        const items = await sellableItemsService.getSellableItems(token);
+        
+        // Filtrar itens com base no termo de busca
+        const filteredItems = search 
+          ? items.filter(item => 
+              item.itemName?.toLowerCase().includes(search.toLowerCase()) ||
+              item.itemEan?.toLowerCase().includes(search.toLowerCase()) ||
+              item.itemExternalCode?.toLowerCase().includes(search.toLowerCase())
+            )
+          : items;
+          
+        setSellableItems(filteredItems);
       } catch (err) {
-        console.error('Error loading products:', err);
-        setError(err.message || 'Erro ao carregar produtos');
+        console.error('Error loading sellable items:', err);
+        setError(err.message || 'Erro ao carregar itens vendáveis');
       } finally {
         setLoading(false);
       }
     };
 
     if (open) {
-      loadProducts();
+      loadSellableItems();
       loadOrderDetails();
     }
   }, [open, orderId]);
 
   const handleSearch = (term) => {
     setSearchTerm(term);
-    const loadProducts = async (search = '') => {
+    const loadSellableItems = async (search = '') => {
       try {
         setLoading(true);
         setError(null);
         const token = localStorage.getItem('authToken');
-        const productsData = await purchaseService.getProducts(token, search);
-        setProducts(productsData.data || []);
+        const items = await sellableItemsService.getSellableItems(token);
+        
+        // Filtrar itens com base no termo de busca
+        const filteredItems = search 
+          ? items.filter(item => 
+              item.itemName?.toLowerCase().includes(search.toLowerCase()) ||
+              item.itemEan?.toLowerCase().includes(search.toLowerCase()) ||
+              item.itemExternalCode?.toLowerCase().includes(search.toLowerCase())
+            )
+          : items;
+          
+        setSellableItems(filteredItems);
       } catch (err) {
-        console.error('Error loading products:', err);
-        setError(err.message || 'Erro ao carregar produtos');
+        console.error('Error loading sellable items:', err);
+        setError(err.message || 'Erro ao carregar itens vendáveis');
       } finally {
         setLoading(false);
       }
     };
-    loadProducts(term);
+    loadSellableItems(term);
   };
 
-  const handleAddToPurchase = async (product) => {
+  const handleAddToPurchase = async (item) => {
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
       const token = localStorage.getItem('authToken');
       
-      // Obter o ID do pedido no nosso sistema (não o ID do iFood)
+      // Obter o ID do pedido no nosso sistema
       const orderData = order && order.orders && Array.isArray(order.orders) && order.orders.length > 0 
         ? order.orders[0] 
         : (order && Array.isArray(order) && order.length > 0 ? order[0] : null);
       
-      console.log('OrderData for ID extraction:', orderData);
-      
-      // Verificar onde está o ID correto do nosso sistema
-      const internalOrderId = orderData?.order?.id || orderId;
-      
-      console.log('Using internalOrderId:', internalOrderId);
+      const internalOrderId = orderData?.order?.id;
       
       if (!internalOrderId) {
         throw new Error('Não foi possível obter o ID do pedido');
       }
       
-      // Usar a nova estrutura de dados para adicionar item ao pedido
+      // Usar a estrutura de dados correta para adicionar item ao pedido
       const itemData = {
-        item_id: product.id,
+        item_id: item.itemId,
         quantity: 1, // Default quantity
-        ean: product.barcode || null
+        ean: item.itemEan || null
       };
       
       await orderService.addOrderItem(internalOrderId, itemData, token);
-      setSuccess(`Produto "${product.name}" adicionado à compra com sucesso!`);
+      setSuccess(`Produto "${item.itemName}" adicionado à compra com sucesso!`);
       
       // Reload order details to show updated items
       const loadOrderDetails = async () => {
@@ -179,8 +194,8 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
         setSuccess(null);
       }, 3000);
     } catch (err) {
-      console.error('Error adding product to purchase:', err);
-      setError(err.message || 'Erro ao adicionar produto à compra');
+      console.error('Error adding item to purchase:', err);
+      setError(err.message || 'Erro ao adicionar item à compra');
     } finally {
       setLoading(false);
     }
@@ -278,17 +293,17 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
 
           {/* Search Field */}
           <TextField
-            label="Buscar produtos"
+            label="Buscar itens vendáveis"
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Pesquise por nome ou EAN"
+            placeholder="Pesquise por nome, EAN ou código externo"
             fullWidth
           />
 
-          {/* Products List */}
+          {/* Sellable Items List */}
           <Box>
             <Typography variant="h6" gutterBottom>
-              Produtos Disponíveis
+              Itens Vendáveis Disponíveis
             </Typography>
             
             {loading ? (
@@ -297,18 +312,18 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
               </Box>
             ) : (
               <List>
-                {products.length > 0 ? (
-                  products.map((product) => (
-                    <div key={product.id}>
+                {sellableItems.length > 0 ? (
+                  sellableItems.map((item) => (
+                    <div key={item.itemId}>
                       <ListItem>
                         <ListItemText
-                          primary={`${product.name || 'Nome não informado'}`}
+                          primary={`${item.itemName || 'Nome não informado'}`}
                           secondary={
                             <>
                               <Typography component="span" variant="body2">
-                                Preço: R$ {parseFloat(product.value).toFixed(2).replace('.', ',')} | 
-                                EAN: {product.barcode || 'Não informado'} | 
-                                Código: {product.id}
+                                Preço: R$ {parseFloat(item.itemPrice?.value || 0).toFixed(2).replace('.', ',')} | 
+                                EAN: {item.itemEan || 'Não informado'} | 
+                                Código Externo: {item.itemExternalCode || 'Não informado'}
                               </Typography>
                             </>
                           }
@@ -317,7 +332,7 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
                           <Button
                             variant="contained"
                             startIcon={<AddIcon />}
-                            onClick={() => handleAddToPurchase(product)}
+                            onClick={() => handleAddToPurchase(item)}
                             disabled={loading}
                           >
                             Adicionar à Compra
@@ -329,7 +344,7 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
                   ))
                 ) : (
                   <ListItem>
-                    <ListItemText primary="Nenhum produto encontrado" />
+                    <ListItemText primary="Nenhum item vendável encontrado" />
                   </ListItem>
                 )}
               </List>
