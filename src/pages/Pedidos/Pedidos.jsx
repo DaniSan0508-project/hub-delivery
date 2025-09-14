@@ -42,6 +42,7 @@ function Pedidos() {
     const [error, setError] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState({ open: false, orderId: null, action: null, actionLabel: '' });
     const [orderDetailsModal, setOrderDetailsModal] = useState({ open: false, orderId: null });
+    const [completedActions, setCompletedActions] = useState(new Set()); // Track completed actions
 
     useEffect(() => {
         let isMounted = true;
@@ -119,6 +120,17 @@ function Pedidos() {
             
             console.log('Transformed orders:', transformedOrders);
             setOrders(transformedOrders);
+            
+            // Clear completed actions for orders that are no longer in the "Dispatched" status
+            setCompletedActions(prev => {
+                const updated = new Set(prev);
+                transformedOrders.forEach(order => {
+                    if (order.status !== 'Dispatched') {
+                        updated.delete(order.id);
+                    }
+                });
+                return updated;
+            });
         } catch (error) {
             console.error('Error fetching orders:', error);
             // Verificar se é um erro de token expirado
@@ -184,6 +196,8 @@ function Pedidos() {
         try {
             const token = localStorage.getItem('authToken');
             await orderService.arriveAtDestination(orderId, token);
+            // Mark this action as completed to disable the button
+            setCompletedActions(prev => new Set(prev).add(orderId));
             // Refresh orders after arriving at destination
             fetchOrders(token);
         } catch (error) {
@@ -257,7 +271,13 @@ function Pedidos() {
         navigate('/');
     };
 
-    const getStatusColor = (status) => {
+    const getStatusColor = (status, orderId) => {
+        // Check if this order is waiting for webhook update
+        const isWaitingWebhook = status === 'Dispatched' && completedActions.has(orderId);
+        if (isWaitingWebhook) {
+            return 'info'; // Show as info color while waiting for webhook
+        }
+        
         switch (status) {
             case 'Placed':
                 return 'info';
@@ -277,12 +297,20 @@ function Pedidos() {
             case 'Arrived':
             case 'Arrived at Destination':
                 return 'success';
+            case 'Concluded':
+                return 'success';
             default:
                 return 'default';
         }
     };
 
-    const getStatusText = (status) => {
+    const getStatusText = (status, orderId) => {
+        // Check if this order is waiting for webhook update
+        const isWaitingWebhook = status === 'Dispatched' && completedActions.has(orderId);
+        if (isWaitingWebhook) {
+            return 'Aguardando atualização do iFood';
+        }
+        
         switch (status) {
             case 'Placed':
                 return 'Recebido';
@@ -302,12 +330,14 @@ function Pedidos() {
             case 'Arrived':
             case 'Arrived at Destination':
                 return 'Chegou ao Destino';
+            case 'Concluded':
+                return 'Concluído';
             default:
                 return status;
         }
     };
 
-    const getAvailableActions = (status) => {
+    const getAvailableActions = (status, orderId) => {
         switch (status) {
             case 'Placed':
                 return [{ action: 'confirm', label: 'Confirmar Pedido', color: 'primary' }];
@@ -323,7 +353,11 @@ function Pedidos() {
             case 'Ready to Pickup':
                 return [{ action: 'dispatch', label: 'Despachar', color: 'success' }];
             case 'Dispatched':
-                return [{ action: 'arriveAtDestination', label: 'Chegou ao Destino', color: 'info' }];
+                // Check if the arrive at destination action has already been completed
+                const isArriveCompleted = completedActions.has(orderId);
+                return isArriveCompleted 
+                    ? [] // No actions available if already completed
+                    : [{ action: 'arriveAtDestination', label: 'Chegou ao Destino', color: 'info' }];
             default:
                 return [];
         }
@@ -431,7 +465,7 @@ function Pedidos() {
                                     <TableBody>
                                         {orders.length > 0 ? (
                                             orders.map((order) => {
-                                                const actions = getAvailableActions(order.status);
+                                                const actions = getAvailableActions(order.status, order.id);
                                                 return (
                                                     <TableRow key={order.id}>
                                                         <TableCell>#{order.id.substring(0, 8)}</TableCell>
@@ -441,8 +475,8 @@ function Pedidos() {
                                                         </TableCell>
                                                         <TableCell>
                                                             <Chip
-                                                                label={getStatusText(order.status)}
-                                                                color={getStatusColor(order.status)}
+                                                                label={getStatusText(order.status, order.id)}
+                                                                color={getStatusColor(order.status, order.id)}
                                                                 size="small"
                                                             />
                                                         </TableCell>
@@ -479,6 +513,16 @@ function Pedidos() {
                                                     >
                                                         Ver Detalhes
                                                     </Button>
+                                                    {order.status === 'Dispatched' && completedActions.has(order.id) && (
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            disabled
+                                                            sx={{ ml: 1, borderColor: 'info.main', color: 'info.main' }}
+                                                        >
+                                                            Aguardando iFood
+                                                        </Button>
+                                                    )}
                                                         </TableCell>
                                                     </TableRow>
                                                 );
