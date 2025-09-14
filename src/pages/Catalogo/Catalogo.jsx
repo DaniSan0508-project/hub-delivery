@@ -17,23 +17,39 @@ import {
   AppBar,
   IconButton,
   CircularProgress,
-  Alert
+  Alert,
+  Tabs,
+  Tab,
+  Chip,
+  Card,
+  CardContent,
+  CardMedia,
+  Grid,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Pagination
 } from '@mui/material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Menu as MenuIcon } from '@mui/icons-material';
 import Sidebar from '../../components/Sidebar';
-import productService from '../../services/productService';
+import catalogService from '../../services/catalogService';
 
 const drawerWidth = 240;
 
 function Catalogo() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [user, setUser] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [products, setProducts] = useState([]);
+  const [catalogs, setCatalogs] = useState([]);
+  const [selectedCatalog, setSelectedCatalog] = useState(null);
+  const [catalogItems, setCatalogItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     let isMounted = true;
@@ -51,7 +67,7 @@ function Catalogo() {
         // Adicionar um pequeno atraso para evitar corrida com outras chamadas
         setTimeout(() => {
           if (isMounted) {
-            fetchProducts(token);
+            fetchCatalogs(token);
           }
         }, 200);
       }
@@ -62,15 +78,26 @@ function Catalogo() {
     };
   }, [navigate]);
 
-  const fetchProducts = async (token) => {
+  const fetchCatalogs = async (token) => {
     try {
       setLoading(true);
       setError(null);
       
-      const productsData = await productService.getProducts(token);
-      setProducts(productsData);
+      const catalogsData = await catalogService.getCatalogs(token);
+      console.log('Received catalogs data:', catalogsData);
+      
+      if (catalogsData && catalogsData.data && catalogsData.data.catalogs) {
+        setCatalogs(catalogsData.data.catalogs);
+        
+        // Selecionar o primeiro catálogo disponível por padrão
+        if (catalogsData.data.catalogs.length > 0) {
+          const firstCatalog = catalogsData.data.catalogs[0];
+          setSelectedCatalog(firstCatalog);
+          fetchCatalogItems(firstCatalog.groupId, token);
+        }
+      }
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('Error fetching catalogs:', error);
       // Verificar se é um erro de token expirado
       if (error.message && error.message.includes('Sessão expirada')) {
         // O serviço já lidou com o redirecionamento
@@ -82,6 +109,53 @@ function Catalogo() {
     }
   };
 
+  const fetchCatalogItems = async (groupId, token) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const itemsData = await catalogService.getCatalogItems(groupId, token);
+      console.log('Received catalog items data:', itemsData);
+      
+      if (itemsData && itemsData.data && itemsData.data.items) {
+        setCatalogItems(itemsData.data.items);
+      } else {
+        setCatalogItems([]);
+      }
+      
+      setPage(1); // Reset to first page when changing catalogs
+    } catch (error) {
+      console.error('Error fetching catalog items:', error);
+      // Verificar se é um erro de token expirado
+      if (error.message && error.message.includes('Sessão expirada')) {
+        // O serviço já lidou com o redirecionamento
+        return;
+      }
+      setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
+      setCatalogItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCatalogChange = (event) => {
+    const catalogId = event.target.value;
+    const catalog = catalogs.find(c => c.catalogId === catalogId);
+    if (catalog) {
+      setSelectedCatalog(catalog);
+      const token = localStorage.getItem('authToken');
+      fetchCatalogItems(catalog.groupId, token);
+    }
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  const handlePageChange = (event, value) => {
+    setPage(value);
+  };
+
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
@@ -90,6 +164,12 @@ function Catalogo() {
     localStorage.removeItem('authToken');
     navigate('/');
   };
+
+  // Paginação dos itens
+  const indexOfLastItem = page * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = catalogItems.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(catalogItems.length / itemsPerPage);
 
   if (!user) {
     return null; // or a loading spinner
@@ -159,55 +239,156 @@ function Catalogo() {
           )}
           
           <Paper elevation={3} sx={{ p: 3, mt: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
               <Typography variant="h6">
-                Produtos Cadastrados
+                Catálogos Disponíveis
               </Typography>
-              <Button variant="contained">
-                Adicionar Produto
-              </Button>
             </Box>
             
-            {loading ? (
+            {loading && catalogs.length === 0 ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
                 <CircularProgress />
               </Box>
             ) : (
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Nome</TableCell>
-                      <TableCell>Categoria</TableCell>
-                      <TableCell>Preço</TableCell>
-                      <TableCell>Ações</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {products.length > 0 ? (
-                      products.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell>{product.name || 'Nome não informado'}</TableCell>
-                          <TableCell>{product.category || 'Categoria não informada'}</TableCell>
-                          <TableCell>
-                            {product.price ? `R$ ${parseFloat(product.price).toFixed(2).replace('.', ',')}` : 'R$ 0,00'}
-                          </TableCell>
-                          <TableCell>
-                            <Button size="small" variant="outlined">Editar</Button>
-                            <Button size="small" variant="outlined" color="error" sx={{ ml: 1 }}>Excluir</Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} align="center">
-                          Nenhum produto encontrado
-                        </TableCell>
-                      </TableRow>
+              <>
+                <FormControl fullWidth sx={{ mb: 3 }}>
+                  <InputLabel>Catálogo</InputLabel>
+                  <Select
+                    value={selectedCatalog ? selectedCatalog.catalogId : ''}
+                    label="Catálogo"
+                    onChange={handleCatalogChange}
+                  >
+                    {catalogs.map((catalog) => (
+                      <MenuItem key={catalog.catalogId} value={catalog.catalogId}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <span>{catalog.catalogId.substring(0, 8)}</span>
+                          <Chip 
+                            label={catalog.status} 
+                            size="small" 
+                            color={catalog.status === 'AVAILABLE' ? 'success' : 'default'} 
+                          />
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                {selectedCatalog && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Informações do Catálogo:
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography variant="body2">
+                          <strong>ID:</strong> {selectedCatalog.catalogId}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography variant="body2">
+                          <strong>Status:</strong> {selectedCatalog.status}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography variant="body2">
+                          <strong>Grupo ID:</strong> {selectedCatalog.groupId}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography variant="body2">
+                          <strong>Modificado em:</strong> {new Date(selectedCatalog.modifiedAt).toLocaleDateString('pt-BR')}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                )}
+                
+                <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
+                  <Tab label={`Itens do Catálogo (${catalogItems.length})`} />
+                </Tabs>
+                
+                {loading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : (
+                  <>
+                    <TableContainer>
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Imagem</TableCell>
+                            <TableCell>Nome</TableCell>
+                            <TableCell>Categoria</TableCell>
+                            <TableCell>EAN</TableCell>
+                            <TableCell>Preço</TableCell>
+                            <TableCell>Quantidade</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {currentItems.length > 0 ? (
+                            currentItems.map((item) => (
+                              <TableRow key={item.itemId}>
+                                <TableCell>
+                                  {item.logosUrls && item.logosUrls.length > 0 ? (
+                                    <Box
+                                      component="img"
+                                      src={`https://logos.ifood.com.br/${item.logosUrls[0]}`}
+                                      alt={item.itemName}
+                                      sx={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 1 }}
+                                    />
+                                  ) : (
+                                    <Box sx={{ width: 50, height: 50, backgroundColor: '#f0f0f0', borderRadius: 1 }} />
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body2">{item.itemName}</Typography>
+                                  <Typography variant="caption" color="textSecondary">
+                                    {item.itemExternalCode}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body2">{item.categoryName}</Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body2">{item.itemEan || 'Não informado'}</Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body2">
+                                    R$ {parseFloat(item.itemPrice?.value || 0).toFixed(2).replace('.', ',')}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body2">
+                                    {item.itemQuantity} {item.itemUnit}
+                                  </Typography>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={6} align="center">
+                                Nenhum item encontrado neste catálogo
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                    
+                    {totalPages > 1 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                        <Pagination 
+                          count={totalPages} 
+                          page={page} 
+                          onChange={handlePageChange} 
+                          color="primary" 
+                        />
+                      </Box>
                     )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                  </>
+                )}
+              </>
             )}
           </Paper>
         </Container>
