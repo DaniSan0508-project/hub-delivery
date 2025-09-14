@@ -22,9 +22,11 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip
+  Chip,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import sellableItemsService from '../services/sellableItemsService';
 import orderService from '../services/orderService';
 
@@ -75,6 +77,29 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [itemQuantities, setItemQuantities] = useState({}); // Estado para controlar quantidades
+
+  // Funções para controlar a quantidade de itens
+  const increaseQuantity = (itemId) => {
+    setItemQuantities(prev => ({
+      ...prev,
+      [itemId]: (prev[itemId] || 1) + 1
+    }));
+  };
+
+  const decreaseQuantity = (itemId) => {
+    setItemQuantities(prev => {
+      const current = prev[itemId] || 1;
+      return {
+        ...prev,
+        [itemId]: current > 1 ? current - 1 : 1
+      };
+    });
+  };
+
+  const getQuantity = (itemId) => {
+    return itemQuantities[itemId] || 1;
+  };
 
   useEffect(() => {
     const loadOrderDetails = async () => {
@@ -155,6 +180,8 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
       setSuccess(null);
       const token = localStorage.getItem('authToken');
       
+      console.log('Token being used:', token ? 'Token exists' : 'No token');
+      
       // Obter o ID do pedido no nosso sistema
       const orderData = order && order.orders && Array.isArray(order.orders) && order.orders.length > 0 
         ? order.orders[0] 
@@ -166,15 +193,29 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
         throw new Error('Não foi possível obter o ID do pedido');
       }
       
+      // Obter a quantidade selecionada para este item
+      const quantity = getQuantity(item.itemId);
+      
       // Usar a estrutura de dados correta para adicionar item ao pedido
       const itemData = {
         item_id: item.itemId,
-        quantity: 1, // Default quantity
+        quantity: quantity,
         ean: item.itemEan || null
       };
       
+      console.log('Adding item to order:', {
+        orderId: internalOrderId,
+        itemData: itemData
+      });
+      
       await orderService.addOrderItem(internalOrderId, itemData, token);
       setSuccess(`Produto "${item.itemName}" adicionado à compra com sucesso!`);
+      
+      // Resetar a quantidade para 1 após adicionar
+      setItemQuantities(prev => ({
+        ...prev,
+        [item.itemId]: 1
+      }));
       
       // Reload order details to show updated items
       const loadOrderDetails = async () => {
@@ -195,7 +236,15 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
       }, 3000);
     } catch (err) {
       console.error('Error adding item to purchase:', err);
-      setError(err.message || 'Erro ao adicionar item à compra');
+      
+      // Tratar erros específicos da API
+      if (err.message && err.message.includes('Order must be in SEPARATION_STARTED status')) {
+        setError('O pedido precisa estar no status "Separação Iniciada" para adicionar itens. Por favor, inicie a separação do pedido primeiro.');
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError('Erro ao adicionar item à compra. Por favor, tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
@@ -329,14 +378,47 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
                           }
                         />
                         <ListItemSecondaryAction>
-                          <Button
-                            variant="contained"
-                            startIcon={<AddIcon />}
-                            onClick={() => handleAddToPurchase(item)}
-                            disabled={loading}
-                          >
-                            Adicionar à Compra
-                          </Button>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <IconButton 
+                              size="small" 
+                              onClick={() => decreaseQuantity(item.itemId)}
+                              disabled={loading}
+                            >
+                              <RemoveIcon />
+                            </IconButton>
+                            <TextField
+                              value={getQuantity(item.itemId)}
+                              sx={{ width: 60 }}
+                              inputProps={{ 
+                                style: { textAlign: 'center' },
+                                min: 1 
+                              }}
+                              disabled={loading}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 1;
+                                setItemQuantities(prev => ({
+                                  ...prev,
+                                  [item.itemId]: Math.max(1, value)
+                                }));
+                              }}
+                            />
+                            <IconButton 
+                              size="small" 
+                              onClick={() => increaseQuantity(item.itemId)}
+                              disabled={loading}
+                            >
+                              <AddIcon />
+                            </IconButton>
+                            <Button
+                              variant="contained"
+                              startIcon={<AddIcon />}
+                              onClick={() => handleAddToPurchase(item)}
+                              disabled={loading}
+                              sx={{ ml: 1 }}
+                            >
+                              Adicionar
+                            </Button>
+                          </Box>
                         </ListItemSecondaryAction>
                       </ListItem>
                       <Divider />
