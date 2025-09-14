@@ -23,10 +23,19 @@ import {
     DialogTitle,
     DialogContent,
     DialogContentText,
-    DialogActions
+    DialogActions,
+    TablePagination,
+    TextField,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    Grid,
+    ToggleButton,
+    ToggleButtonGroup
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { Menu as MenuIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
+import { Menu as MenuIcon, Visibility as VisibilityIcon, Search as SearchIcon } from '@mui/icons-material';
 import Sidebar from '../../components/Sidebar';
 import orderService from '../../services/orderService';
 import OrderDetailsModal from '../../components/OrderDetailsModal';
@@ -43,6 +52,16 @@ function Pedidos() {
     const [confirmDialog, setConfirmDialog] = useState({ open: false, orderId: null, action: null, actionLabel: '' });
     const [orderDetailsModal, setOrderDetailsModal] = useState({ open: false, orderId: null });
     const [completedActions, setCompletedActions] = useState(new Set()); // Track completed actions
+    
+    // Pagination states
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    
+    // Filter states
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [sortBy, setSortBy] = useState('createdAt'); // Default sort by creation date
+    const [sortOrder, setSortOrder] = useState('desc'); // Default descending (newest first)
 
     useEffect(() => {
         let isMounted = true;
@@ -119,7 +138,21 @@ function Pedidos() {
             }).filter(order => order !== null); // Remover pedidos inválidos
             
             console.log('Transformed orders:', transformedOrders);
-            setOrders(transformedOrders);
+            
+            // Sort orders by creation date (newest first)
+            const sortedOrders = [...transformedOrders].sort((a, b) => {
+                // If createdAt is not available, we can't sort properly, so keep original order
+                if (!a.createdAt || !b.createdAt) return 0;
+                
+                // Convert to Date objects for comparison
+                const dateA = new Date(a.createdAt);
+                const dateB = new Date(b.createdAt);
+                
+                // Sort descending (newest first)
+                return dateB - dateA;
+            });
+            
+            setOrders(sortedOrders);
             
             // Clear completed actions for orders that are no longer in the "Dispatched" status
             setCompletedActions(prev => {
@@ -143,6 +176,111 @@ function Pedidos() {
             setLoading(false);
         }
     };
+
+    const handlePageChange = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleRowsPerPageChange = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0); // Reset to first page when changing rows per page
+    };
+
+    const handleSearchChange = (event) => {
+        setSearchTerm(event.target.value);
+        setPage(0); // Reset to first page when searching
+    };
+
+    const handleStatusFilterChange = (event) => {
+        setStatusFilter(event.target.value);
+        setPage(0); // Reset to first page when filtering
+    };
+
+    const handleSort = (column) => {
+        if (sortBy === column) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(column);
+            setSortOrder('asc');
+        }
+        setPage(0); // Reset to first page when sorting
+    };
+
+    // Filter and sort orders based on search term, status filter, and sorting
+    const filteredAndSortedOrders = orders
+        .filter(order => {
+            // Apply search filter
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                // Search in order ID (both full ID and shortened version)
+                const orderIdMatch = order.id.toLowerCase().includes(term) || 
+                                   `#${order.id.substring(0, 8)}`.toLowerCase().includes(term);
+                // Search in customer name
+                const customerMatch = order.customer.toLowerCase().includes(term);
+                // Search in total amount (convert to string and format)
+                const totalMatch = `R$ ${parseFloat(order.total).toFixed(2).replace('.', ',')}`.includes(term);
+                
+                // Return true if any of the fields match
+                if (!orderIdMatch && !customerMatch && !totalMatch) {
+                    return false;
+                }
+            }
+            
+            // Apply status filter
+            if (statusFilter !== 'all') {
+                if (statusFilter === 'waitingWebhook') {
+                    // Special filter for orders waiting for webhook
+                    return order.status === 'Dispatched' && completedActions.has(order.id);
+                } else if (statusFilter === 'Concluded') {
+                    return order.status === 'Concluded';
+                } else {
+                    return order.status === statusFilter;
+                }
+            }
+            
+            return true;
+        })
+        .sort((a, b) => {
+            // Apply sorting
+            let aValue, bValue;
+            
+            switch (sortBy) {
+                case 'id':
+                    aValue = a.id;
+                    bValue = b.id;
+                    break;
+                case 'customer':
+                    aValue = a.customer || '';
+                    bValue = b.customer || '';
+                    break;
+                case 'total':
+                    aValue = a.total;
+                    bValue = b.total;
+                    break;
+                case 'status':
+                    aValue = a.status;
+                    bValue = b.status;
+                    break;
+                case 'createdAt':
+                default:
+                    aValue = a.createdAt || '';
+                    bValue = b.createdAt || '';
+                    break;
+            }
+            
+            // Handle numeric comparisons
+            if (typeof aValue === 'number' && typeof bValue === 'number') {
+                return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+            }
+            
+            // Handle string comparisons
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                const comparison = aValue.localeCompare(bValue);
+                return sortOrder === 'asc' ? comparison : -comparison;
+            }
+            
+            return 0;
+        });
 
     const updateOrderStatus = async (orderId, status) => {
         try {
@@ -436,6 +574,11 @@ function Pedidos() {
                                 Pedidos Recentes
                             </Typography>
                             <Button variant="contained" onClick={() => {
+                                // Clear filters when refreshing
+                                setSearchTerm('');
+                                setStatusFilter('all');
+                                setPage(0);
+                                
                                 const token = localStorage.getItem('authToken');
                                 if (token) {
                                     fetchOrders(token);
@@ -450,93 +593,203 @@ function Pedidos() {
                                 <CircularProgress />
                             </Box>
                         ) : (
-                            <TableContainer>
-                                <Table>
-                                    <TableHead>
-                                        <TableRow>
-                                            <TableCell>Nº Pedido</TableCell>
-                                            <TableCell>Cliente</TableCell>
-                                            <TableCell>Total</TableCell>
-                                            <TableCell>Status</TableCell>
-                                            <TableCell>Horário</TableCell>
-                                            <TableCell>Ações</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {orders.length > 0 ? (
-                                            orders.map((order) => {
-                                                const actions = getAvailableActions(order.status, order.id);
-                                                return (
-                                                    <TableRow key={order.id}>
-                                                        <TableCell>#{order.id.substring(0, 8)}</TableCell>
-                                                        <TableCell>{order.customer || 'Cliente não informado'}</TableCell>
-                                                        <TableCell>
-                                                            R$ {parseFloat(order.total).toFixed(2).replace('.', ',')}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Chip
-                                                                label={getStatusText(order.status, order.id)}
-                                                                color={getStatusColor(order.status, order.id)}
-                                                                size="small"
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {order.createdAt || 'Horário não informado'}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {actions.length > 0 ? (
-                                                    actions.map((action, index) => (
-                                                        <Button
-                                                            key={index}
-                                                            size="small"
-                                                            variant="contained"
-                                                            color={action.color}
-                                                            onClick={() => {
-                                                                handleActionClick(order.id, action.action, action.label);
-                                                            }}
-                                                            sx={{ ml: index > 0 ? 1 : 0 }}
-                                                        >
-                                                            {action.label}
-                                                        </Button>
-                                                    ))
-                                                ) : (
-                                                    <Button size="small" variant="outlined" disabled>
-                                                        Nenhuma ação disponível
-                                                    </Button>
-                                                )}
-                                                    <Button
-                                                        size="small"
-                                                        variant="outlined"
-                                                        startIcon={<VisibilityIcon />}
-                                                        onClick={() => handleViewOrderDetails(order.id)}
-                                                        sx={{ ml: 1 }}
-                                                    >
-                                                        Ver Detalhes
-                                                    </Button>
-                                                    {order.status === 'Dispatched' && completedActions.has(order.id) && (
-                                                        <Button
-                                                            size="small"
-                                                            variant="outlined"
-                                                            disabled
-                                                            sx={{ ml: 1, borderColor: 'info.main', color: 'info.main' }}
-                                                        >
-                                                            Aguardando iFood
-                                                        </Button>
-                                                    )}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                );
-                                            })
-                                        ) : (
+                            <>
+                                {/* Filter and search controls */}
+                                <Grid container spacing={2} sx={{ mb: 2 }}>
+                                    <Grid item xs={12} md={4}>
+                                        <TextField
+                                            fullWidth
+                                            label="Buscar pedido"
+                                            variant="outlined"
+                                            size="small"
+                                            value={searchTerm}
+                                            onChange={handleSearchChange}
+                                            InputProps={{
+                                                endAdornment: <SearchIcon />
+                                            }}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <FormControl fullWidth size="small">
+                                            <InputLabel>Status</InputLabel>
+                                            <Select
+                                                value={statusFilter}
+                                                label="Status"
+                                                onChange={handleStatusFilterChange}
+                                            >
+                                                <MenuItem value="all">Todos</MenuItem>
+                                                <MenuItem value="Placed">Recebido</MenuItem>
+                                                <MenuItem value="Confirmed">Confirmado</MenuItem>
+                                                <MenuItem value="SPS">Separação iniciada</MenuItem>
+                                                <MenuItem value="Separation Started">Separação iniciada</MenuItem>
+                                                <MenuItem value="SPE">Separação finalizada</MenuItem>
+                                                <MenuItem value="Separation Ended">Separação finalizada</MenuItem>
+                                                <MenuItem value="READY_TO_PICKUP">Pronto para Retirada</MenuItem>
+                                                <MenuItem value="Ready to Pickup">Pronto para Retirada</MenuItem>
+                                                <MenuItem value="Dispatched">Despachado</MenuItem>
+                                                <MenuItem value="waitingWebhook">Aguardando iFood</MenuItem>
+                                                <MenuItem value="Arrived">Chegou ao Destino</MenuItem>
+                                                <MenuItem value="Arrived at Destination">Chegou ao Destino</MenuItem>
+                                                <MenuItem value="Concluded">Concluído</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <FormControl fullWidth size="small">
+                                            <InputLabel>Itens por página</InputLabel>
+                                            <Select
+                                                value={rowsPerPage}
+                                                label="Itens por página"
+                                                onChange={handleRowsPerPageChange}
+                                            >
+                                                <MenuItem value={5}>5</MenuItem>
+                                                <MenuItem value={10}>10</MenuItem>
+                                                <MenuItem value={20}>20</MenuItem>
+                                                <MenuItem value={50}>50</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                </Grid>
+
+                                <TableContainer>
+                                    <Table>
+                                        <TableHead>
                                             <TableRow>
-                                                <TableCell colSpan={6} align="center">
-                                                    Nenhum pedido encontrado
+                                                <TableCell 
+                                                    onClick={() => handleSort('id')}
+                                                    sx={{ cursor: 'pointer', fontWeight: 'bold' }}
+                                                >
+                                                    Nº Pedido {sortBy === 'id' && (sortOrder === 'asc' ? '↑' : '↓')}
                                                 </TableCell>
+                                                <TableCell 
+                                                    onClick={() => handleSort('customer')}
+                                                    sx={{ cursor: 'pointer', fontWeight: 'bold' }}
+                                                >
+                                                    Cliente {sortBy === 'customer' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                                </TableCell>
+                                                <TableCell 
+                                                    onClick={() => handleSort('total')}
+                                                    sx={{ cursor: 'pointer', fontWeight: 'bold' }}
+                                                >
+                                                    Total {sortBy === 'total' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                                </TableCell>
+                                                <TableCell 
+                                                    onClick={() => handleSort('status')}
+                                                    sx={{ cursor: 'pointer', fontWeight: 'bold' }}
+                                                >
+                                                    Status {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                                </TableCell>
+                                                <TableCell 
+                                                    onClick={() => handleSort('createdAt')}
+                                                    sx={{ cursor: 'pointer', fontWeight: 'bold' }}
+                                                >
+                                                    Horário {sortBy === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                                </TableCell>
+                                                <TableCell>Ações</TableCell>
                                             </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
+                                        </TableHead>
+                                        <TableBody>
+                                            {filteredAndSortedOrders.length > 0 ? (
+                                                filteredAndSortedOrders
+                                                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                                                    .map((order, index) => {
+                                                        const actions = getAvailableActions(order.status, order.id);
+                                                        return (
+                                                            <TableRow 
+                                                                key={order.id} 
+                                                                sx={{
+                                                                    // Zebrada nas linhas
+                                                                    backgroundColor: index % 2 === 0 ? 'rgba(0, 0, 0, 0.02)' : 'white',
+                                                                    '&:hover': {
+                                                                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <TableCell>#{order.id.substring(0, 8)}</TableCell>
+                                                                <TableCell>{order.customer || 'Cliente não informado'}</TableCell>
+                                                                <TableCell>
+                                                                    R$ {parseFloat(order.total).toFixed(2).replace('.', ',')}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Chip
+                                                                        label={getStatusText(order.status, order.id)}
+                                                                        color={getStatusColor(order.status, order.id)}
+                                                                        size="small"
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {order.createdAt || 'Horário não informado'}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {actions.length > 0 ? (
+                                                                        actions.map((action, index) => (
+                                                                            <Button
+                                                                                key={index}
+                                                                                size="small"
+                                                                                variant="contained"
+                                                                                color={action.color}
+                                                                                onClick={() => {
+                                                                                    handleActionClick(order.id, action.action, action.label);
+                                                                                }}
+                                                                                sx={{ ml: index > 0 ? 1 : 0 }}
+                                                                            >
+                                                                                {action.label}
+                                                                            </Button>
+                                                                        ))
+                                                                    ) : (
+                                                                        <Button size="small" variant="outlined" disabled>
+                                                                            Nenhuma ação disponível
+                                                                        </Button>
+                                                                    )}
+                                                                    <Button
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        startIcon={<VisibilityIcon />}
+                                                                        onClick={() => handleViewOrderDetails(order.id)}
+                                                                        sx={{ ml: 1 }}
+                                                                    >
+                                                                        Ver Detalhes
+                                                                    </Button>
+                                                                    {order.status === 'Dispatched' && completedActions.has(order.id) && (
+                                                                        <Button
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            disabled
+                                                                            sx={{ ml: 1, borderColor: 'info.main', color: 'info.main' }}
+                                                                        >
+                                                                            Aguardando iFood
+                                                                        </Button>
+                                                                    )}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} align="center">
+                                                        Nenhum pedido encontrado
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                                
+                                {/* Pagination */}
+                                <TablePagination
+                                    component="div"
+                                    count={filteredAndSortedOrders.length}
+                                    page={page}
+                                    onPageChange={handlePageChange}
+                                    rowsPerPage={rowsPerPage}
+                                    onRowsPerPageChange={handleRowsPerPageChange}
+                                    rowsPerPageOptions={[5, 10, 20, 50]}
+                                    labelRowsPerPage="Itens por página:"
+                                    labelDisplayedRows={({ from, to, count }) => 
+                                        `${from}-${to} de ${count !== -1 ? count : `mais de ${to}`}`
+                                    }
+                                />
+                            </>
                         )}
                     </Paper>
                 </Container>
