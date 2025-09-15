@@ -32,10 +32,21 @@ import {
     MenuItem,
     Grid,
     ToggleButton,
-    ToggleButtonGroup
+    ToggleButtonGroup,
+    Tooltip
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { Menu as MenuIcon, Visibility as VisibilityIcon, Search as SearchIcon } from '@mui/icons-material';
+import { 
+    Menu as MenuIcon, 
+    Visibility as VisibilityIcon, 
+    Search as SearchIcon,
+    Check as CheckIcon,
+    PlayArrow as PlayArrowIcon,
+    Stop as StopIcon,
+    Send as SendIcon,
+    LocalShipping as LocalShippingIcon,
+    Person as PersonIcon
+} from '@mui/icons-material';
 import Sidebar from '../../components/Sidebar';
 import orderService from '../../services/orderService';
 import OrderDetailsModal from '../../components/OrderDetailsModal';
@@ -279,7 +290,20 @@ function Pedidos() {
                 return sortOrder === 'asc' ? comparison : -comparison;
             }
             
-            return 0;
+            // Ordenação padrão por data de criação (mais recente primeiro)
+            // Se não tivermos datas, ordenar por ID (mais recente primeiro)
+            if (!a.createdAt && !b.createdAt) {
+                return b.id.localeCompare(a.id); // Comparar IDs se não tiver datas
+            }
+            
+            // Se só um tiver data, colocar o que tem data primeiro
+            if (!a.createdAt) return 1;
+            if (!b.createdAt) return -1;
+            
+            // Se ambos tiverem datas, ordenar por data (mais recente primeiro)
+            const dateA = new Date(a.createdAt);
+            const dateB = new Date(b.createdAt);
+            return dateB - dateA;
         });
 
     const updateOrderStatus = async (orderId, status) => {
@@ -515,27 +539,27 @@ function Pedidos() {
     const getAvailableActions = (status, orderId) => {
         switch (status) {
             case 'Placed':
-                return [{ action: 'confirm', label: 'Confirmar Pedido', color: 'primary' }];
+                return [{ action: 'confirm', label: 'Confirmar Pedido', color: 'primary', icon: <CheckIcon /> }];
             case 'Confirmed':
-                return [{ action: 'startSeparation', label: 'Iniciar Separação', color: 'primary' }];
+                return [{ action: 'startSeparation', label: 'Iniciar Separação', color: 'primary', icon: <PlayArrowIcon /> }];
             case 'SPS':
             case 'Separation Started':
-                return [{ action: 'endSeparation', label: 'Finalizar Separação', color: 'secondary' }];
+                return [{ action: 'endSeparation', label: 'Finalizar Separação', color: 'secondary', icon: <StopIcon /> }];
             case 'SPE':
             case 'Separation Ended':
-                return [{ action: 'readyToPickup', label: 'Pronto para Retirada', color: 'warning' }];
+                return [{ action: 'readyToPickup', label: 'Pronto para Retirada', color: 'warning', icon: <SendIcon /> }];
             case 'READY_TO_PICKUP':
             case 'Ready to Pickup':
                 return [
-                    { action: 'dispatch', label: 'Despachar', color: 'success' },
-                    { action: 'requestIfoodDriver', label: 'Entregador iFood Parceiro', color: 'primary' }
+                    { action: 'dispatch', label: 'Despachar', color: 'success', icon: <SendIcon /> },
+                    { action: 'requestIfoodDriver', label: 'Entregador iFood Parceiro', color: 'primary', icon: <LocalShippingIcon /> }
                 ];
             case 'Dispatched':
                 // Check if the arrive at destination action has already been completed
                 const isArriveCompleted = completedActions.has(orderId);
                 return isArriveCompleted 
                     ? [] // No actions available if already completed
-                    : [{ action: 'arriveAtDestination', label: 'Chegou ao Destino', color: 'info' }];
+                    : [{ action: 'arriveAtDestination', label: 'Chegou ao Destino', color: 'info', icon: <PersonIcon /> }];
             default:
                 return [];
         }
@@ -763,42 +787,71 @@ function Pedidos() {
                                                                 <TableCell>
                                                                     {actions.length > 0 ? (
                                                                         actions.map((action, index) => (
-                                                                            <Button
-                                                                                key={index}
-                                                                                size="small"
-                                                                                variant="contained"
-                                                                                color={action.color}
-                                                                                onClick={() => {
-                                                                                    handleActionClick(order.id, action.action, action.label);
-                                                                                }}
-                                                                                sx={{ ml: index > 0 ? 1 : 0 }}
-                                                                            >
-                                                                                {action.label}
-                                                                            </Button>
+                                                                            <Tooltip key={index} title={action.label}>
+                                                                                <IconButton
+                                                                                    size="small"
+                                                                                    color={action.color}
+                                                                                    onClick={() => {
+                                                                                        handleActionClick(order.id, action.action, action.label);
+                                                                                    }}
+                                                                                    sx={{ 
+                                                                                        ml: index > 0 ? 1 : 0,
+                                                                                        backgroundColor: `${action.color}.main`,
+                                                                                        color: 'white',
+                                                                                        '&:hover': {
+                                                                                            backgroundColor: `${action.color}.dark`,
+                                                                                        }
+                                                                                    }}
+                                                                                >
+                                                                                    {action.icon}
+                                                                                </IconButton>
+                                                                            </Tooltip>
                                                                         ))
                                                                     ) : (
-                                                                        <Button size="small" variant="outlined" disabled>
-                                                                            Nenhuma ação disponível
-                                                                        </Button>
+                                                                        <Tooltip title="Nenhuma ação disponível">
+                                                                            <IconButton
+                                                                                size="small"
+                                                                                disabled
+                                                                                sx={{ 
+                                                                                    ml: 1,
+                                                                                    backgroundColor: 'grey.300',
+                                                                                    color: 'grey.500',
+                                                                                }}
+                                                                            >
+                                                                                <StopIcon />
+                                                                            </IconButton>
+                                                                        </Tooltip>
                                                                     )}
-                                                                    <Button
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                        startIcon={<VisibilityIcon />}
-                                                                        onClick={() => handleViewOrderDetails(order.id)}
-                                                                        sx={{ ml: 1 }}
-                                                                    >
-                                                                        Ver Detalhes
-                                                                    </Button>
-                                                                    {order.status === 'Dispatched' && completedActions.has(order.id) && (
-                                                                        <Button
+                                                                    <Tooltip title="Ver Detalhes">
+                                                                        <IconButton
                                                                             size="small"
-                                                                            variant="outlined"
-                                                                            disabled
-                                                                            sx={{ ml: 1, borderColor: 'info.main', color: 'info.main' }}
+                                                                            onClick={() => handleViewOrderDetails(order.id)}
+                                                                            sx={{ 
+                                                                                ml: 1,
+                                                                                backgroundColor: 'info.main',
+                                                                                color: 'white',
+                                                                                '&:hover': {
+                                                                                    backgroundColor: 'info.dark',
+                                                                                }
+                                                                            }}
                                                                         >
-                                                                            Aguardando iFood
-                                                                        </Button>
+                                                                            <VisibilityIcon />
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                    {order.status === 'Dispatched' && completedActions.has(order.id) && (
+                                                                        <Tooltip title="Aguardando iFood">
+                                                                            <IconButton
+                                                                                size="small"
+                                                                                disabled
+                                                                                sx={{ 
+                                                                                    ml: 1,
+                                                                                    backgroundColor: 'info.main',
+                                                                                    color: 'white',
+                                                                                }}
+                                                                            >
+                                                                                <CircularProgress size={20} color="inherit" />
+                                                                            </IconButton>
+                                                                        </Tooltip>
                                                                     )}
                                                                 </TableCell>
                                                             </TableRow>
