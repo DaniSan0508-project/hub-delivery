@@ -78,9 +78,13 @@ function Pedidos() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [sortBy, setSortBy] = useState('createdAt'); // Default sort by creation date
     const [sortOrder, setSortOrder] = useState('desc'); // Default descending (newest first)
+    
+    // Polling state
+    const [isPolling, setIsPolling] = useState(true);
 
     useEffect(() => {
         let isMounted = true;
+        let pollingInterval;
         
         // Check if user is logged in
         const token = localStorage.getItem('authToken');
@@ -98,17 +102,35 @@ function Pedidos() {
                         fetchOrders(token);
                     }
                 }, 150);
+                
+                // Iniciar polling a cada 10 segundos se estiver habilitado
+                if (isPolling) {
+                    pollingInterval = setInterval(() => {
+                        if (isMounted) {
+                            const token = localStorage.getItem('authToken');
+                            if (token) {
+                                fetchOrders(token, true); // Pass true to indicate this is a polling call
+                            }
+                        }
+                    }, 10000); // 10 segundos
+                }
             }
         }
         
         return () => {
             isMounted = false;
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
         };
-    }, [navigate]);
+    }, [navigate, isPolling]);
 
-    const fetchOrders = async (token) => {
+    const fetchOrders = async (token, isPolling = false) => {
         try {
-            setLoading(true);
+            // Only set loading state for manual refresh, not for polling
+            if (!isPolling) {
+                setLoading(true);
+            }
             setError(null);
             console.log('Fetching orders with token:', token);
 
@@ -132,23 +154,25 @@ function Pedidos() {
             
             console.log('Number of orders received:', ordersArray.length);
             
-            // Verificar se há novos pedidos para mostrar notificação
-            const currentOrderIds = new Set(orders.map(order => order.id));
-            const newOrders = ordersArray.filter(order => {
-                // Verificar se a estrutura do pedido é válida
-                if (!order || !order.order || !order.consumer) {
-                    return false;
-                }
-                return !currentOrderIds.has(order.order.id);
-            });
-            
-            // Mostrar notificação para novos pedidos
-            if (newOrders.length > 0) {
-                setSnackbar({
-                    open: true,
-                    message: `Você tem ${newOrders.length} novo(s) pedido(s)!`,
-                    severity: 'success'
+            // Verificar se há novos pedidos para mostrar notificação (apenas durante polling)
+            if (isPolling) {
+                const currentOrderIds = new Set(orders.map(order => order.id));
+                const newOrders = ordersArray.filter(order => {
+                    // Verificar se a estrutura do pedido é válida
+                    if (!order || !order.order || !order.consumer) {
+                        return false;
+                    }
+                    return !currentOrderIds.has(order.order.id);
                 });
+                
+                // Mostrar notificação para novos pedidos
+                if (newOrders.length > 0) {
+                    setSnackbar({
+                        open: true,
+                        message: `Você tem ${newOrders.length} novo(s) pedido(s)!`,
+                        severity: 'success'
+                    });
+                }
             }
             
             // Transform the API response to match our table structure
@@ -226,7 +250,10 @@ function Pedidos() {
             
             setError(errorMessage);
         } finally {
-            setLoading(false);
+            // Only set loading to false for manual refresh, not for polling
+            if (!isPolling) {
+                setLoading(false);
+            }
         }
     };
 
@@ -878,19 +905,31 @@ function Pedidos() {
                             <Typography variant="h6">
                                 Pedidos Recentes
                             </Typography>
-                            <Button variant="contained" onClick={() => {
-                                // Clear filters when refreshing
-                                setSearchTerm('');
-                                setStatusFilter('all');
-                                setPage(0);
-                                
-                                const token = localStorage.getItem('authToken');
-                                if (token) {
-                                    fetchOrders(token);
-                                }
-                            }}>
-                                Atualizar
-                            </Button>
+                            <Box>
+                                <Button 
+                                    variant="contained" 
+                                    onClick={() => {
+                                        // Clear filters when refreshing
+                                        setSearchTerm('');
+                                        setStatusFilter('all');
+                                        setPage(0);
+                                        
+                                        const token = localStorage.getItem('authToken');
+                                        if (token) {
+                                            fetchOrders(token, false); // Pass false to indicate this is a manual refresh
+                                        }
+                                    }}
+                                    sx={{ mr: 2 }}
+                                >
+                                    Atualizar
+                                </Button>
+                                <Button 
+                                    variant="outlined" 
+                                    onClick={() => setIsPolling(!isPolling)}
+                                >
+                                    {isPolling ? 'Parar Atualização' : 'Iniciar Atualização'}
+                                </Button>
+                            </Box>
                         </Box>
 
                         {loading ? (
