@@ -81,6 +81,9 @@ function Pedidos() {
     
     // Polling state
     const [isPolling, setIsPolling] = useState(true);
+    
+    // Track notified orders to avoid duplicate notifications
+    const [notifiedOrders, setNotifiedOrders] = useState(new Set());
 
     useEffect(() => {
         let isMounted = true;
@@ -162,14 +165,29 @@ function Pedidos() {
                     if (!order || !order.order || !order.consumer) {
                         return false;
                     }
-                    return !currentOrderIds.has(order.order.id);
+                    // Verificar se é um pedido novo (não existia antes)
+                    const isNewOrder = !currentOrderIds.has(order.order.id);
+                    // Verificar se o pedido está com status "Confirmado" (Placed)
+                    const isPlacedOrder = order.order.status === 'Placed';
+                    // Verificar se já foi notificado
+                    const isAlreadyNotified = notifiedOrders.has(order.order.id);
+                    
+                    // Só notificar se é um novo pedido confirmado que ainda não foi notificado
+                    return isNewOrder && isPlacedOrder && !isAlreadyNotified;
                 });
                 
-                // Mostrar notificação para novos pedidos
+                // Mostrar notificação para novos pedidos confirmados
                 if (newOrders.length > 0) {
+                    // Adicionar os novos pedidos ao conjunto de pedidos notificados
+                    setNotifiedOrders(prev => {
+                        const updated = new Set(prev);
+                        newOrders.forEach(order => updated.add(order.order.id));
+                        return updated;
+                    });
+                    
                     setSnackbar({
                         open: true,
-                        message: `Você tem ${newOrders.length} novo(s) pedido(s)!`,
+                        message: `Você tem ${newOrders.length} novo(s) pedido(s) confirmado(s)!`,
                         severity: 'success'
                     });
                 }
@@ -219,6 +237,18 @@ function Pedidos() {
                 transformedOrders.forEach(order => {
                     if (order.status !== 'Dispatched') {
                         updated.delete(order.id);
+                    }
+                });
+                return updated;
+            });
+            
+            // Limpar notifiedOrders para pedidos que não estão mais na lista (para evitar acumulo de IDs)
+            setNotifiedOrders(prev => {
+                const updated = new Set(prev);
+                const transformedOrderIds = new Set(transformedOrders.map(order => order.id));
+                prev.forEach(orderId => {
+                    if (!transformedOrderIds.has(orderId)) {
+                        updated.delete(orderId);
                     }
                 });
                 return updated;
