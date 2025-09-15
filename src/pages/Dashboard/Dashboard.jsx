@@ -138,15 +138,19 @@ function Dashboard() {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'Placed': return 'info';
-            case 'Confirmed': return 'success';
+            case 'Placed': return '#ff9800'; // Laranja
+            case 'Confirmed': return '#4caf50'; // Verde
             case 'SPS':
-            case 'Separation Started': return 'warning';
+            case 'Separation Started': return '#ffeb3b'; // Amarelo
             case 'SPE':
-            case 'Separation Ended': return 'info';
-            case 'Dispatched': return 'primary';
-            case 'Concluded': return 'default';
-            default: return 'default';
+            case 'Separation Ended': return '#ffc107'; // Âmbar
+            case 'READY_TO_PICKUP':
+            case 'Ready to Pickup': return '#ff5722'; // Laranja escuro
+            case 'Dispatched': return '#9c27b0'; // Roxo
+            case 'Arrived':
+            case 'Arrived at Destination': return '#3f51b5'; // Índigo
+            case 'Concluded': return '#009688'; // Verde-azulado
+            default: return '#9e9e9e'; // Cinza
         }
     };
 
@@ -158,7 +162,11 @@ function Dashboard() {
             case 'Separation Started': return 'Separação iniciada';
             case 'SPE':
             case 'Separation Ended': return 'Separação finalizada';
+            case 'READY_TO_PICKUP':
+            case 'Ready to Pickup': return 'Pronto para Retirada';
             case 'Dispatched': return 'Despachado';
+            case 'Arrived':
+            case 'Arrived at Destination': return 'Chegou ao Destino';
             case 'Concluded': return 'Concluído';
             default: return status;
         }
@@ -445,9 +453,12 @@ function Dashboard() {
                                         <Chip
                                             key={status}
                                             label={`${getStatusText(status)}: ${count}`}
-                                            color={getStatusColor(status)}
-                                            variant="outlined"
-                                            sx={{ fontWeight: 'bold', fontSize: '0.875rem' }}
+                                            sx={{ 
+                                                fontWeight: 'bold', 
+                                                fontSize: '0.875rem',
+                                                backgroundColor: getStatusColor(status),
+                                                color: 'white'
+                                            }}
                                         />
                                     ))}
                                 </Box>
