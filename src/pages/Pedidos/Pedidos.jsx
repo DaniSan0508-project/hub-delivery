@@ -344,6 +344,40 @@ function Pedidos() {
         }
     };
 
+    const requestIfoodDriver = async (orderId) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            await orderService.requestIfoodDriver(orderId, token);
+            // Refresh orders after requesting iFood driver
+            fetchOrders(token);
+        } catch (error) {
+            console.error('Error requesting iFood driver:', error);
+            
+            // Tratar mensagens de erro mais comuns
+            let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
+            
+            if (error.message) {
+                // Verificar se é um erro do iFood com detalhes
+                if (error.message.includes('Failed to request iFood driver')) {
+                    // Tentar extrair a mensagem de erro detalhada
+                    try {
+                        const errorDetails = JSON.parse(error.message.replace('Failed to request iFood driver.', '').trim());
+                        if (errorDetails.message) {
+                            errorMessage = errorDetails.message;
+                        }
+                    } catch (parseError) {
+                        // Se não conseguir parsear, usar a mensagem original
+                        errorMessage = 'Erro ao solicitar entregador iFood. Por favor, tente novamente.';
+                    }
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            setError(errorMessage);
+        }
+    };
+
     const readyToPickup = async (orderId) => {
         try {
             const token = localStorage.getItem('authToken');
@@ -379,6 +413,9 @@ function Pedidos() {
                 break;
             case 'arriveAtDestination':
                 await arriveAtDestination(orderId);
+                break;
+            case 'requestIfoodDriver':
+                await requestIfoodDriver(orderId);
                 break;
             case 'confirm':
                 await updateOrderStatus(orderId, 'CONFIRMED');
@@ -489,7 +526,10 @@ function Pedidos() {
                 return [{ action: 'readyToPickup', label: 'Pronto para Retirada', color: 'warning' }];
             case 'READY_TO_PICKUP':
             case 'Ready to Pickup':
-                return [{ action: 'dispatch', label: 'Despachar', color: 'success' }];
+                return [
+                    { action: 'dispatch', label: 'Despachar', color: 'success' },
+                    { action: 'requestIfoodDriver', label: 'Entregador iFood Parceiro', color: 'primary' }
+                ];
             case 'Dispatched':
                 // Check if the arrive at destination action has already been completed
                 const isArriveCompleted = completedActions.has(orderId);

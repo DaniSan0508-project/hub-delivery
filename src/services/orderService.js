@@ -50,6 +50,11 @@ class OrderService {
         return await api.post(`http://localhost:8090/api/orders/${orderId}/arrive-at-destination`, {}, token);
     }
 
+    async requestIfoodDriver(orderId, token) {
+        // Nova rota para solicitar entregador iFood parceiro
+        return await api.post(`http://localhost:8090/api/orders/${orderId}/request-ifood-driver`, {}, token);
+    }
+
     async addOrderItem(orderId, itemData, token) {
         // Usar a nova rota para adicionar item ao pedido
         return await api.post(`http://localhost:8090/api/orders/${orderId}/items`, itemData, token);
