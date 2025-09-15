@@ -474,32 +474,32 @@ function Pedidos() {
         // Check if this order is waiting for webhook update
         const isWaitingWebhook = status === 'Dispatched' && completedActions.has(orderId);
         if (isWaitingWebhook) {
-            return 'info'; // Show as info color while waiting for webhook
+            return '#2196f3'; // Azul para aguardando webhook
         }
         
         switch (status) {
             case 'Placed':
-                return 'info';
+                return '#ff9800'; // Laranja para Recebido
             case 'Confirmed':
-                return 'success';
+                return '#4caf50'; // Verde para Confirmado
             case 'SPS':
             case 'Separation Started':
-                return 'warning';
+                return '#ffeb3b'; // Amarelo para Separação iniciada
             case 'SPE':
             case 'Separation Ended':
-                return 'info';
+                return '#ffc107'; // Âmbar para Separação finalizada
             case 'READY_TO_PICKUP':
             case 'Ready to Pickup':
-                return 'warning';
+                return '#ff5722'; // Laranja escuro para Pronto para Retirada
             case 'Dispatched':
-                return 'default';
+                return '#9c27b0'; // Roxo para Despachado
             case 'Arrived':
             case 'Arrived at Destination':
-                return 'success';
+                return '#3f51b5'; // Índigo para Chegou ao Destino
             case 'Concluded':
-                return 'success';
+                return '#009688'; // Verde-azulado para Concluído
             default:
-                return 'default';
+                return '#9e9e9e'; // Cinza para status desconhecido
         }
     };
 
@@ -539,27 +539,27 @@ function Pedidos() {
     const getAvailableActions = (status, orderId) => {
         switch (status) {
             case 'Placed':
-                return [{ action: 'confirm', label: 'Confirmar Pedido', color: 'primary', icon: <CheckIcon /> }];
+                return [{ action: 'confirm', label: 'Confirmar Pedido', color: '#4caf50', icon: <CheckIcon /> }]; // Verde
             case 'Confirmed':
-                return [{ action: 'startSeparation', label: 'Iniciar Separação', color: 'primary', icon: <PlayArrowIcon /> }];
+                return [{ action: 'startSeparation', label: 'Iniciar Separação', color: '#2196f3', icon: <PlayArrowIcon /> }]; // Azul
             case 'SPS':
             case 'Separation Started':
-                return [{ action: 'endSeparation', label: 'Finalizar Separação', color: 'secondary', icon: <StopIcon /> }];
+                return [{ action: 'endSeparation', label: 'Finalizar Separação', color: '#ff9800', icon: <StopIcon /> }]; // Laranja
             case 'SPE':
             case 'Separation Ended':
-                return [{ action: 'readyToPickup', label: 'Pronto para Retirada', color: 'warning', icon: <SendIcon /> }];
+                return [{ action: 'readyToPickup', label: 'Pronto para Retirada', color: '#9c27b0', icon: <SendIcon /> }]; // Roxo
             case 'READY_TO_PICKUP':
             case 'Ready to Pickup':
                 return [
-                    { action: 'dispatch', label: 'Despachar', color: 'success', icon: <SendIcon /> },
-                    { action: 'requestIfoodDriver', label: 'Entregador iFood Parceiro', color: 'primary', icon: <LocalShippingIcon /> }
+                    { action: 'dispatch', label: 'Despachar', color: '#ff5722', icon: <SendIcon /> }, // Laranja escuro
+                    { action: 'requestIfoodDriver', label: 'Entregador iFood Parceiro', color: '#00bcd4', icon: <LocalShippingIcon /> } // Ciano
                 ];
             case 'Dispatched':
                 // Check if the arrive at destination action has already been completed
                 const isArriveCompleted = completedActions.has(orderId);
                 return isArriveCompleted 
                     ? [] // No actions available if already completed
-                    : [{ action: 'arriveAtDestination', label: 'Chegou ao Destino', color: 'info', icon: <PersonIcon /> }];
+                    : [{ action: 'arriveAtDestination', label: 'Chegou ao Destino', color: '#3f51b5', icon: <PersonIcon /> }]; // Índigo
             default:
                 return [];
         }
@@ -777,7 +777,11 @@ function Pedidos() {
                                                                 <TableCell>
                                                                     <Chip
                                                                         label={getStatusText(order.status, order.id)}
-                                                                        color={getStatusColor(order.status, order.id)}
+                                                                        sx={{ 
+                                                                            backgroundColor: getStatusColor(order.status, order.id),
+                                                                            color: 'white',
+                                                                            fontWeight: 'bold'
+                                                                        }}
                                                                         size="small"
                                                                     />
                                                                 </TableCell>
@@ -790,16 +794,20 @@ function Pedidos() {
                                                                             <Tooltip key={index} title={action.label}>
                                                                                 <IconButton
                                                                                     size="small"
-                                                                                    color={action.color}
                                                                                     onClick={() => {
                                                                                         handleActionClick(order.id, action.action, action.label);
                                                                                     }}
                                                                                     sx={{ 
-                                                                                        ml: index > 0 ? 1 : 0,
-                                                                                        backgroundColor: `${action.color}.main`,
+                                                                                        ml: index > 0 ? 0.5 : 0,
+                                                                                        backgroundColor: action.color,
                                                                                         color: 'white',
                                                                                         '&:hover': {
-                                                                                            backgroundColor: `${action.color}.dark`,
+                                                                                            backgroundColor: `${action.color}dd`, // Opacidade um pouco menor no hover
+                                                                                        },
+                                                                                        width: 32,
+                                                                                        height: 32,
+                                                                                        '& .MuiSvgIcon-root': {
+                                                                                            fontSize: 16
                                                                                         }
                                                                                     }}
                                                                                 >
@@ -813,9 +821,14 @@ function Pedidos() {
                                                                                 size="small"
                                                                                 disabled
                                                                                 sx={{ 
-                                                                                    ml: 1,
-                                                                                    backgroundColor: 'grey.300',
-                                                                                    color: 'grey.500',
+                                                                                    ml: 0.5,
+                                                                                    backgroundColor: 'grey.400',
+                                                                                    color: 'grey.700',
+                                                                                    width: 32,
+                                                                                    height: 32,
+                                                                                    '& .MuiSvgIcon-root': {
+                                                                                        fontSize: 16
+                                                                                    }
                                                                                 }}
                                                                             >
                                                                                 <StopIcon />
@@ -827,11 +840,16 @@ function Pedidos() {
                                                                             size="small"
                                                                             onClick={() => handleViewOrderDetails(order.id)}
                                                                             sx={{ 
-                                                                                ml: 1,
-                                                                                backgroundColor: 'info.main',
+                                                                                ml: 0.5,
+                                                                                backgroundColor: '#2196f3', // Azul
                                                                                 color: 'white',
                                                                                 '&:hover': {
-                                                                                    backgroundColor: 'info.dark',
+                                                                                    backgroundColor: '#1976d2', // Azul mais escuro
+                                                                                },
+                                                                                width: 32,
+                                                                                height: 32,
+                                                                                '& .MuiSvgIcon-root': {
+                                                                                    fontSize: 16
                                                                                 }
                                                                             }}
                                                                         >
@@ -844,12 +862,18 @@ function Pedidos() {
                                                                                 size="small"
                                                                                 disabled
                                                                                 sx={{ 
-                                                                                    ml: 1,
-                                                                                    backgroundColor: 'info.main',
+                                                                                    ml: 0.5,
+                                                                                    backgroundColor: '#2196f3', // Azul
                                                                                     color: 'white',
+                                                                                    width: 32,
+                                                                                    height: 32,
+                                                                                    '& .MuiCircularProgress-root': {
+                                                                                        width: 16,
+                                                                                        height: 16
+                                                                                    }
                                                                                 }}
                                                                             >
-                                                                                <CircularProgress size={20} color="inherit" />
+                                                                                <CircularProgress size={16} color="inherit" />
                                                                             </IconButton>
                                                                         </Tooltip>
                                                                     )}
