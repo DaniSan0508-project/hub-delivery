@@ -33,7 +33,8 @@ import {
     Grid,
     ToggleButton,
     ToggleButtonGroup,
-    Tooltip
+    Tooltip,
+    Snackbar
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -47,6 +48,7 @@ import {
     LocalShipping as LocalShippingIcon,
     Person as PersonIcon
 } from '@mui/icons-material';
+import { Alert as MuiAlert } from '@mui/material';
 import Sidebar from '../../components/Sidebar';
 import orderService from '../../services/orderService';
 import OrderDetailsModal from '../../components/OrderDetailsModal';
@@ -63,6 +65,9 @@ function Pedidos() {
     const [confirmDialog, setConfirmDialog] = useState({ open: false, orderId: null, action: null, actionLabel: '' });
     const [orderDetailsModal, setOrderDetailsModal] = useState({ open: false, orderId: null });
     const [completedActions, setCompletedActions] = useState(new Set()); // Track completed actions
+    
+    // Snackbar states
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
     
     // Pagination states
     const [page, setPage] = useState(0);
@@ -127,6 +132,25 @@ function Pedidos() {
             
             console.log('Number of orders received:', ordersArray.length);
             
+            // Verificar se há novos pedidos para mostrar notificação
+            const currentOrderIds = new Set(orders.map(order => order.id));
+            const newOrders = ordersArray.filter(order => {
+                // Verificar se a estrutura do pedido é válida
+                if (!order || !order.order || !order.consumer) {
+                    return false;
+                }
+                return !currentOrderIds.has(order.order.id);
+            });
+            
+            // Mostrar notificação para novos pedidos
+            if (newOrders.length > 0) {
+                setSnackbar({
+                    open: true,
+                    message: `Você tem ${newOrders.length} novo(s) pedido(s)!`,
+                    severity: 'success'
+                });
+            }
+            
             // Transform the API response to match our table structure
             const transformedOrders = ordersArray.map((order, index) => {
                 console.log(`Processing order ${index}:`, order);
@@ -182,7 +206,25 @@ function Pedidos() {
                 // O serviço já lidou com o redirecionamento
                 return;
             }
-            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
+            
+            // Tratamento de erro mais amigável
+            let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
+            if (error.message) {
+                // Mapear mensagens de erro comuns para mensagens mais amigáveis
+                if (error.message.includes('Network Error')) {
+                    errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'Sessão expirada. Faça login novamente.';
+                } else if (error.message.includes('403')) {
+                    errorMessage = 'Acesso negado. Você não tem permissão para acessar esses dados.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Erro no servidor. Tente novamente em alguns minutos.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -312,9 +354,39 @@ function Pedidos() {
             await orderService.updateOrderStatus(orderId, status, token);
             // Refresh orders after status update
             fetchOrders(token);
+            
+            // Mostrar notificação de sucesso
+            setSnackbar({
+                open: true,
+                message: 'Status do pedido atualizado com sucesso!',
+                severity: 'success'
+            });
         } catch (error) {
             console.error('Error updating order status:', error);
-            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
+            
+            // Tratamento de erro mais amigável
+            let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
+            if (error.message) {
+                // Mapear mensagens de erro comuns para mensagens mais amigáveis
+                if (error.message.includes('Network Error')) {
+                    errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'Sessão expirada. Faça login novamente.';
+                } else if (error.message.includes('403')) {
+                    errorMessage = 'Acesso negado. Você não tem permissão para realizar esta ação.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Erro no servidor. Tente novamente em alguns minutos.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            // Mostrar notificação de erro
+            setSnackbar({
+                open: true,
+                message: errorMessage,
+                severity: 'error'
+            });
         }
     };
 
@@ -324,9 +396,39 @@ function Pedidos() {
             await orderService.dispatchOrder(orderId, token);
             // Refresh orders after dispatch
             fetchOrders(token);
+            
+            // Mostrar notificação de sucesso
+            setSnackbar({
+                open: true,
+                message: 'Pedido despachado com sucesso!',
+                severity: 'success'
+            });
         } catch (error) {
             console.error('Error dispatching order:', error);
-            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
+            
+            // Tratamento de erro mais amigável
+            let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
+            if (error.message) {
+                // Mapear mensagens de erro comuns para mensagens mais amigáveis
+                if (error.message.includes('Network Error')) {
+                    errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'Sessão expirada. Faça login novamente.';
+                } else if (error.message.includes('403')) {
+                    errorMessage = 'Acesso negado. Você não tem permissão para realizar esta ação.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Erro no servidor. Tente novamente em alguns minutos.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            // Mostrar notificação de erro
+            setSnackbar({
+                open: true,
+                message: errorMessage,
+                severity: 'error'
+            });
         }
     };
 
@@ -336,9 +438,39 @@ function Pedidos() {
             await orderService.endSeparation(orderId, token);
             // Refresh orders after ending separation
             fetchOrders(token);
+            
+            // Mostrar notificação de sucesso
+            setSnackbar({
+                open: true,
+                message: 'Separação finalizada com sucesso!',
+                severity: 'success'
+            });
         } catch (error) {
             console.error('Error ending separation:', error);
-            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
+            
+            // Tratamento de erro mais amigável
+            let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
+            if (error.message) {
+                // Mapear mensagens de erro comuns para mensagens mais amigáveis
+                if (error.message.includes('Network Error')) {
+                    errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'Sessão expirada. Faça login novamente.';
+                } else if (error.message.includes('403')) {
+                    errorMessage = 'Acesso negado. Você não tem permissão para realizar esta ação.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Erro no servidor. Tente novamente em alguns minutos.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            // Mostrar notificação de erro
+            setSnackbar({
+                open: true,
+                message: errorMessage,
+                severity: 'error'
+            });
         }
     };
 
@@ -348,9 +480,39 @@ function Pedidos() {
             await orderService.startSeparation(orderId, token);
             // Refresh orders after starting separation
             fetchOrders(token);
+            
+            // Mostrar notificação de sucesso
+            setSnackbar({
+                open: true,
+                message: 'Separação iniciada com sucesso!',
+                severity: 'success'
+            });
         } catch (error) {
             console.error('Error starting separation:', error);
-            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
+            
+            // Tratamento de erro mais amigável
+            let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
+            if (error.message) {
+                // Mapear mensagens de erro comuns para mensagens mais amigáveis
+                if (error.message.includes('Network Error')) {
+                    errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'Sessão expirada. Faça login novamente.';
+                } else if (error.message.includes('403')) {
+                    errorMessage = 'Acesso negado. Você não tem permissão para realizar esta ação.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Erro no servidor. Tente novamente em alguns minutos.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            // Mostrar notificação de erro
+            setSnackbar({
+                open: true,
+                message: errorMessage,
+                severity: 'error'
+            });
         }
     };
 
@@ -362,9 +524,39 @@ function Pedidos() {
             setCompletedActions(prev => new Set(prev).add(orderId));
             // Refresh orders after arriving at destination
             fetchOrders(token);
+            
+            // Mostrar notificação de sucesso
+            setSnackbar({
+                open: true,
+                message: 'Chegada ao destino registrada com sucesso!',
+                severity: 'success'
+            });
         } catch (error) {
             console.error('Error arriving at destination:', error);
-            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
+            
+            // Tratamento de erro mais amigável
+            let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
+            if (error.message) {
+                // Mapear mensagens de erro comuns para mensagens mais amigáveis
+                if (error.message.includes('Network Error')) {
+                    errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'Sessão expirada. Faça login novamente.';
+                } else if (error.message.includes('403')) {
+                    errorMessage = 'Acesso negado. Você não tem permissão para realizar esta ação.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Erro no servidor. Tente novamente em alguns minutos.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            // Mostrar notificação de erro
+            setSnackbar({
+                open: true,
+                message: errorMessage,
+                severity: 'error'
+            });
         }
     };
 
@@ -374,6 +566,13 @@ function Pedidos() {
             await orderService.requestIfoodDriver(orderId, token);
             // Refresh orders after requesting iFood driver
             fetchOrders(token);
+            
+            // Mostrar notificação de sucesso
+            setSnackbar({
+                open: true,
+                message: 'Solicitação de entregador iFood enviada com sucesso!',
+                severity: 'success'
+            });
         } catch (error) {
             console.error('Error requesting iFood driver:', error);
             
@@ -398,7 +597,12 @@ function Pedidos() {
                 }
             }
             
-            setError(errorMessage);
+            // Mostrar notificação de erro
+            setSnackbar({
+                open: true,
+                message: errorMessage,
+                severity: 'error'
+            });
         }
     };
 
@@ -408,9 +612,39 @@ function Pedidos() {
             await orderService.readyToPickup(orderId, token);
             // Refresh orders after marking as ready to pickup
             fetchOrders(token);
+            
+            // Mostrar notificação de sucesso
+            setSnackbar({
+                open: true,
+                message: 'Pedido marcado como pronto para retirada!',
+                severity: 'success'
+            });
         } catch (error) {
             console.error('Error marking order as ready to pickup:', error);
-            setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
+            
+            // Tratamento de erro mais amigável
+            let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
+            if (error.message) {
+                // Mapear mensagens de erro comuns para mensagens mais amigáveis
+                if (error.message.includes('Network Error')) {
+                    errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'Sessão expirada. Faça login novamente.';
+                } else if (error.message.includes('403')) {
+                    errorMessage = 'Acesso negado. Você não tem permissão para realizar esta ação.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Erro no servidor. Tente novamente em alguns minutos.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            // Mostrar notificação de erro
+            setSnackbar({
+                open: true,
+                message: errorMessage,
+                severity: 'error'
+            });
         }
     };
 
@@ -449,12 +683,19 @@ function Pedidos() {
         }
     };
 
-    const handleCloseDialog = () => {
-        setConfirmDialog({ open: false, orderId: null, action: null, actionLabel: '' });
+    const handleCloseSnackbar = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setSnackbar({ ...snackbar, open: false });
     };
 
     const handleViewOrderDetails = (orderId) => {
         setOrderDetailsModal({ open: true, orderId });
+    };
+
+    const handleCloseDialog = () => {
+        setConfirmDialog({ open: false, orderId: null, action: null, actionLabel: '' });
     };
 
     const handleCloseOrderDetails = () => {
@@ -463,11 +704,6 @@ function Pedidos() {
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem('authToken');
-        navigate('/');
     };
 
     const getStatusColor = (status, orderId) => {
@@ -563,6 +799,11 @@ function Pedidos() {
             default:
                 return [];
         }
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('authToken');
+        navigate('/');
     };
 
     if (!user) {
@@ -935,6 +1176,22 @@ function Pedidos() {
                     onClose={handleCloseOrderDetails} 
                     orderId={orderDetailsModal.orderId}
                 />
+                
+                {/* Snackbar for notifications */}
+                <Snackbar 
+                    open={snackbar.open} 
+                    autoHideDuration={6000} 
+                    onClose={handleCloseSnackbar}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                >
+                    <MuiAlert 
+                        onClose={handleCloseSnackbar} 
+                        severity={snackbar.severity} 
+                        sx={{ width: '100%' }}
+                    >
+                        {snackbar.message}
+                    </MuiAlert>
+                </Snackbar>
             </Box>
         </Box>
     );
