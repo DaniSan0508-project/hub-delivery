@@ -45,6 +45,16 @@ class OrderService {
         return await api.post(`http://localhost:8090/api/orders/${orderId}/dispatch`, {}, token);
     }
 
+    async confirmOrder(orderId, token) {
+        // Nova rota para confirmar o pedido
+        return await api.post(`http://localhost:8090/api/orders/${orderId}/confirm`, {}, token);
+    }
+
+    async dispatchOrderToIfood(orderId, token) {
+        // Nova rota para despachar o pedido para o iFood
+        return await api.post(`http://localhost:8090/api/orders/${orderId}/dispatch-to-ifood`, {}, token);
+    }
+
     async arriveAtDestination(orderId, token) {
         // Nova rota para indicar chegada ao destino
         return await api.post(`http://localhost:8090/api/orders/${orderId}/arrive-at-destination`, {}, token);

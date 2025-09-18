@@ -447,6 +447,48 @@ function Pedidos() {
         }
     };
 
+    const confirmOrder = async (orderId) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            await orderService.confirmOrder(orderId, token);
+            // Refresh orders after confirming
+            fetchOrders(token);
+            
+            // Mostrar notificação de sucesso
+            setSnackbar({
+                open: true,
+                message: 'Pedido confirmado com sucesso!',
+                severity: 'success'
+            });
+        } catch (error) {
+            console.error('Error confirming order:', error);
+            
+            // Tratamento de erro mais amigável
+            let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
+            if (error.message) {
+                // Mapear mensagens de erro comuns para mensagens mais amigáveis
+                if (error.message.includes('Network Error')) {
+                    errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'Sessão expirada. Faça login novamente.';
+                } else if (error.message.includes('403')) {
+                    errorMessage = 'Acesso negado. Você não tem permissão para realizar esta ação.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Erro no servidor. Tente novamente em alguns minutos.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            // Mostrar notificação de erro
+            setSnackbar({
+                open: true,
+                message: errorMessage,
+                severity: 'error'
+            });
+        }
+    };
+
     const dispatchOrder = async (orderId) => {
         try {
             const token = localStorage.getItem('authToken');
@@ -462,6 +504,48 @@ function Pedidos() {
             });
         } catch (error) {
             console.error('Error dispatching order:', error);
+            
+            // Tratamento de erro mais amigável
+            let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
+            if (error.message) {
+                // Mapear mensagens de erro comuns para mensagens mais amigáveis
+                if (error.message.includes('Network Error')) {
+                    errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'Sessão expirada. Faça login novamente.';
+                } else if (error.message.includes('403')) {
+                    errorMessage = 'Acesso negado. Você não tem permissão para realizar esta ação.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Erro no servidor. Tente novamente em alguns minutos.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            // Mostrar notificação de erro
+            setSnackbar({
+                open: true,
+                message: errorMessage,
+                severity: 'error'
+            });
+        }
+    };
+
+    const dispatchOrderToIfood = async (orderId) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            await orderService.dispatchOrderToIfood(orderId, token);
+            // Refresh orders after dispatching to iFood
+            fetchOrders(token);
+            
+            // Mostrar notificação de sucesso
+            setSnackbar({
+                open: true,
+                message: 'Pedido despachado para o iFood com sucesso!',
+                severity: 'success'
+            });
+        } catch (error) {
+            console.error('Error dispatching order to iFood:', error);
             
             // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
@@ -726,6 +810,9 @@ function Pedidos() {
             case 'dispatch':
                 await dispatchOrder(orderId);
                 break;
+            case 'dispatchToIfood':
+                await dispatchOrderToIfood(orderId);
+                break;
             case 'arriveAtDestination':
                 await arriveAtDestination(orderId);
                 break;
@@ -733,7 +820,7 @@ function Pedidos() {
                 await requestIfoodDriver(orderId);
                 break;
             case 'confirm':
-                await updateOrderStatus(orderId, 'CONFIRMED');
+                await confirmOrder(orderId);
                 break;
             default:
                 break;
@@ -845,7 +932,7 @@ function Pedidos() {
             case 'Ready to Pickup':
                 return [
                     { action: 'dispatch', label: 'Despachar', color: '#ff5722', icon: <SendIcon /> }, // Laranja escuro
-                    { action: 'requestIfoodDriver', label: 'Entregador iFood Parceiro', color: '#00bcd4', icon: <LocalShippingIcon /> } // Ciano
+                    { action: 'dispatchToIfood', label: 'Entregador iFood Parceiro', color: '#00bcd4', icon: <LocalShippingIcon /> } // Ciano
                 ];
             case 'Dispatched':
                 // Check if the arrive at destination action has already been completed
