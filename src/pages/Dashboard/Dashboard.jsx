@@ -145,7 +145,8 @@ function Dashboard() {
             case 'SPE':
             case 'Separation Ended': return '#ffc107'; // Âmbar
             case 'READY_TO_PICKUP':
-            case 'Ready to Pickup': return '#ff5722'; // Laranja escuro
+            case 'Ready to Pickup':
+            case 'RFI': return '#ff5722'; // Laranja escuro
             case 'Dispatched': return '#9c27b0'; // Roxo
             case 'Arrived':
             case 'Arrived at Destination': return '#3f51b5'; // Índigo
@@ -163,7 +164,8 @@ function Dashboard() {
             case 'SPE':
             case 'Separation Ended': return 'Separação finalizada';
             case 'READY_TO_PICKUP':
-            case 'Ready to Pickup': return 'Pronto para Retirada';
+            case 'Ready to Pickup':
+            case 'RFI': return 'Pronto para Retirada';
             case 'Dispatched': return 'Despachado';
             case 'Arrived':
             case 'Arrived at Destination': return 'Chegou ao Destino';

@@ -343,6 +343,9 @@ function Pedidos() {
                     return order.status === 'Dispatched' && completedActions.has(order.id);
                 } else if (statusFilter === 'Concluded') {
                     return order.status === 'Concluded';
+                } else if (statusFilter === 'RFI') {
+                    // Tratar RFI da mesma forma que READY_TO_PICKUP
+                    return order.status === 'READY_TO_PICKUP' || order.status === 'Ready to Pickup' || order.status === 'RFI';
                 } else {
                     return order.status === statusFilter;
                 }
@@ -870,7 +873,8 @@ function Pedidos() {
                 return '#ffc107'; // Âmbar para Separação finalizada
             case 'READY_TO_PICKUP':
             case 'Ready to Pickup':
-                return '#ff5722'; // Laranja escuro para Pronto para Retirada
+            case 'RFI':
+                return '#ff5722'; // Laranja escuro para Pronto para Retirada e RFI
             case 'Dispatched':
                 return '#9c27b0'; // Roxo para Despachado
             case 'Arrived':
@@ -905,7 +909,8 @@ function Pedidos() {
                 return 'Separação finalizada';
             case 'READY_TO_PICKUP':
             case 'Ready to Pickup':
-                return 'Pronto para Retirada';
+            case 'RFI':
+                return 'Pronto para Retirada'; // Usando o mesmo texto para RFI
             case 'Dispatched':
                 return 'Despachado';
             case 'Arrived':
@@ -934,6 +939,7 @@ function Pedidos() {
                 return [{ action: 'readyToPickup', label: 'Pronto para Retirada', color: '#9c27b0', icon: <SendIcon /> }]; // Roxo
             case 'READY_TO_PICKUP':
             case 'Ready to Pickup':
+            case 'RFI': // Adicionando suporte para status RFI
                 return [
                     { action: 'dispatch', label: 'Despachar', color: '#ff5722', icon: <SendIcon /> }, // Laranja escuro
                     { action: 'dispatchToIfood', label: 'Entregador iFood Parceiro', color: '#00bcd4', icon: <LocalShippingIcon /> } // Ciano
@@ -1091,6 +1097,7 @@ function Pedidos() {
                                                 <MenuItem value="Separation Ended">Separação finalizada</MenuItem>
                                                 <MenuItem value="READY_TO_PICKUP">Pronto para Retirada</MenuItem>
                                                 <MenuItem value="Ready to Pickup">Pronto para Retirada</MenuItem>
+                                                <MenuItem value="RFI">Pronto para Retirada (RFI)</MenuItem>
                                                 <MenuItem value="Dispatched">Despachado</MenuItem>
                                                 <MenuItem value="waitingWebhook">Aguardando iFood</MenuItem>
                                                 <MenuItem value="Arrived">Chegou ao Destino</MenuItem>
