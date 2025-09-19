@@ -36,6 +36,8 @@ const getStatusColor = (status) => {
       return 'default';
     case 'Concluded':
       return 'default';
+    case 'Cancelled':
+      return 'error';
     default:
       return 'default';
   }
@@ -57,6 +59,8 @@ const getStatusText = (status) => {
       return 'Despachado';
     case 'Concluded':
       return 'Concluído';
+    case 'Cancelled':
+      return 'Cancelado';
     default:
       return status;
   }

@@ -878,6 +878,8 @@ function Pedidos() {
                 return '#3f51b5'; // Índigo para Chegou ao Destino
             case 'Concluded':
                 return '#009688'; // Verde-azulado para Concluído
+            case 'Cancelled':
+                return '#f44336'; // Vermelho para Cancelado
             default:
                 return '#9e9e9e'; // Cinza para status desconhecido
         }
@@ -911,6 +913,8 @@ function Pedidos() {
                 return 'Chegou ao Destino';
             case 'Concluded':
                 return 'Concluído';
+            case 'Cancelled':
+                return 'Cancelado';
             default:
                 return status;
         }
