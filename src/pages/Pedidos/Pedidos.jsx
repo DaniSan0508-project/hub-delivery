@@ -37,9 +37,9 @@ import {
     Snackbar
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { 
-    Menu as MenuIcon, 
-    Visibility as VisibilityIcon, 
+import {
+    Menu as MenuIcon,
+    Visibility as VisibilityIcon,
     Search as SearchIcon,
     Check as CheckIcon,
     PlayArrow as PlayArrowIcon,
@@ -65,30 +65,30 @@ function Pedidos() {
     const [confirmDialog, setConfirmDialog] = useState({ open: false, orderId: null, action: null, actionLabel: '' });
     const [orderDetailsModal, setOrderDetailsModal] = useState({ open: false, orderId: null });
     const [completedActions, setCompletedActions] = useState(new Set()); // Track completed actions
-    
+
     // Snackbar states
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
-    
+
     // Pagination states
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-    
+
     // Filter states
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [sortBy, setSortBy] = useState('createdAt'); // Default sort by creation date
     const [sortOrder, setSortOrder] = useState('desc'); // Default descending (newest first)
-    
+
     // Polling state
     const [isPolling, setIsPolling] = useState(true);
-    
+
     // Track notified orders to avoid duplicate notifications
     const [notifiedOrders, setNotifiedOrders] = useState(new Set());
 
     useEffect(() => {
         let isMounted = true;
         let pollingInterval;
-        
+
         // Check if user is logged in
         const token = localStorage.getItem('authToken');
         if (!token) {
@@ -105,7 +105,7 @@ function Pedidos() {
                         fetchOrders(token);
                     }
                 }, 150);
-                
+
                 // Iniciar polling a cada 10 segundos se estiver habilitado
                 if (isPolling) {
                     pollingInterval = setInterval(() => {
@@ -119,7 +119,7 @@ function Pedidos() {
                 }
             }
         }
-        
+
         return () => {
             isMounted = false;
             if (pollingInterval) {
@@ -139,14 +139,14 @@ function Pedidos() {
 
             const ordersData = await orderService.getOrders(token);
             console.log('Received orders data:', ordersData);
-            
+
             // Verificar se ordersData existe
             if (!ordersData) {
                 console.error('No orders data received');
                 setOrders([]);
                 return;
             }
-            
+
             // Verificar se ordersData.data existe (nova estrutura da API)
             const ordersArray = ordersData.data || ordersData.orders || [];
             if (!Array.isArray(ordersArray)) {
@@ -154,9 +154,9 @@ function Pedidos() {
                 setOrders([]);
                 return;
             }
-            
+
             console.log('Number of orders received:', ordersArray.length);
-            
+
             // Verificar se há novos pedidos para mostrar notificação (apenas durante polling)
             if (isPolling) {
                 const currentOrderIds = new Set(orders.map(order => order.id));
@@ -171,11 +171,11 @@ function Pedidos() {
                     const isPlacedOrder = order.order.status === 'Placed';
                     // Verificar se já foi notificado
                     const isAlreadyNotified = notifiedOrders.has(order.order.id);
-                    
+
                     // Só notificar se é um novo pedido confirmado que ainda não foi notificado
                     return isNewOrder && isPlacedOrder && !isAlreadyNotified;
                 });
-                
+
                 // Mostrar notificação para novos pedidos confirmados
                 if (newOrders.length > 0) {
                     // Adicionar os novos pedidos ao conjunto de pedidos notificados
@@ -184,7 +184,7 @@ function Pedidos() {
                         newOrders.forEach(order => updated.add(order.order.id));
                         return updated;
                     });
-                    
+
                     setSnackbar({
                         open: true,
                         message: `Você tem ${newOrders.length} novo(s) pedido(s) confirmado(s)!`,
@@ -192,17 +192,17 @@ function Pedidos() {
                     });
                 }
             }
-            
+
             // Transform the API response to match our table structure
             const transformedOrders = ordersArray.map((order, index) => {
                 console.log(`Processing order ${index}:`, order);
-                
+
                 // Verificar se a estrutura do pedido é válida
                 if (!order || !order.order || !order.consumer) {
                     console.error(`Invalid order structure at index ${index}:`, order);
                     return null;
                 }
-                
+
                 // Verificar se order.order.items existe
                 const items = order.order.items || [];
                 return {
@@ -210,27 +210,28 @@ function Pedidos() {
                     customer: order.consumer.name,
                     status: order.order.status || 'CONFIRMED', // Default to 'CONFIRMED' if status is not provided
                     total: items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0),
-                    createdAt: 'Horário não disponível' // API doesn't provide this yet
+                    createdAt: 'Horário não disponível', // API doesn't provide this yet
+                    delivery_provider: order.order.delivery_provider
                 };
             }).filter(order => order !== null); // Remover pedidos inválidos
-            
+
             console.log('Transformed orders:', transformedOrders);
-            
+
             // Sort orders by creation date (newest first)
             const sortedOrders = [...transformedOrders].sort((a, b) => {
                 // If createdAt is not available, we can't sort properly, so keep original order
                 if (!a.createdAt || !b.createdAt) return 0;
-                
+
                 // Convert to Date objects for comparison
                 const dateA = new Date(a.createdAt);
                 const dateB = new Date(b.createdAt);
-                
+
                 // Sort descending (newest first)
                 return dateB - dateA;
             });
-            
+
             setOrders(sortedOrders);
-            
+
             // Clear completed actions for orders that are no longer in the "Dispatched" status
             setCompletedActions(prev => {
                 const updated = new Set(prev);
@@ -241,7 +242,7 @@ function Pedidos() {
                 });
                 return updated;
             });
-            
+
             // Limpar notifiedOrders para pedidos que não estão mais na lista (para evitar acumulo de IDs)
             setNotifiedOrders(prev => {
                 const updated = new Set(prev);
@@ -260,7 +261,7 @@ function Pedidos() {
                 // O serviço já lidou com o redirecionamento
                 return;
             }
-            
+
             // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
@@ -277,7 +278,7 @@ function Pedidos() {
                     errorMessage = error.message;
                 }
             }
-            
+
             setError(errorMessage);
         } finally {
             // Only set loading to false for manual refresh, not for polling
@@ -323,19 +324,19 @@ function Pedidos() {
             if (searchTerm) {
                 const term = searchTerm.toLowerCase();
                 // Search in order ID (both full ID and shortened version)
-                const orderIdMatch = order.id.toLowerCase().includes(term) || 
-                                   `#${order.id.substring(0, 8)}`.toLowerCase().includes(term);
+                const orderIdMatch = order.id.toLowerCase().includes(term) ||
+                    `#${order.id.substring(0, 8)}`.toLowerCase().includes(term);
                 // Search in customer name
                 const customerMatch = order.customer.toLowerCase().includes(term);
                 // Search in total amount (convert to string and format)
                 const totalMatch = `R$ ${parseFloat(order.total).toFixed(2).replace('.', ',')}`.includes(term);
-                
+
                 // Return true if any of the fields match
                 if (!orderIdMatch && !customerMatch && !totalMatch) {
                     return false;
                 }
             }
-            
+
             // Apply status filter
             if (statusFilter !== 'all') {
                 if (statusFilter === 'waitingWebhook') {
@@ -350,13 +351,13 @@ function Pedidos() {
                     return order.status === statusFilter;
                 }
             }
-            
+
             return true;
         })
         .sort((a, b) => {
             // Apply sorting
             let aValue, bValue;
-            
+
             switch (sortBy) {
                 case 'id':
                     aValue = a.id;
@@ -380,28 +381,28 @@ function Pedidos() {
                     bValue = b.createdAt || '';
                     break;
             }
-            
+
             // Handle numeric comparisons
             if (typeof aValue === 'number' && typeof bValue === 'number') {
                 return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
             }
-            
+
             // Handle string comparisons
             if (typeof aValue === 'string' && typeof bValue === 'string') {
                 const comparison = aValue.localeCompare(bValue);
                 return sortOrder === 'asc' ? comparison : -comparison;
             }
-            
+
             // Ordenação padrão por data de criação (mais recente primeiro)
             // Se não tivermos datas, ordenar por ID (mais recente primeiro)
             if (!a.createdAt && !b.createdAt) {
                 return b.id.localeCompare(a.id); // Comparar IDs se não tiver datas
             }
-            
+
             // Se só um tiver data, colocar o que tem data primeiro
             if (!a.createdAt) return 1;
             if (!b.createdAt) return -1;
-            
+
             // Se ambos tiverem datas, ordenar por data (mais recente primeiro)
             const dateA = new Date(a.createdAt);
             const dateB = new Date(b.createdAt);
@@ -414,7 +415,7 @@ function Pedidos() {
             await orderService.updateOrderStatus(orderId, status, token);
             // Refresh orders after status update
             fetchOrders(token);
-            
+
             // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
@@ -423,7 +424,7 @@ function Pedidos() {
             });
         } catch (error) {
             console.error('Error updating order status:', error);
-            
+
             // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
@@ -440,7 +441,7 @@ function Pedidos() {
                     errorMessage = error.message;
                 }
             }
-            
+
             // Mostrar notificação de erro
             setSnackbar({
                 open: true,
@@ -456,7 +457,7 @@ function Pedidos() {
             await orderService.confirmOrder(orderId, token);
             // Refresh orders after confirming
             fetchOrders(token);
-            
+
             // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
@@ -465,7 +466,7 @@ function Pedidos() {
             });
         } catch (error) {
             console.error('Error confirming order:', error);
-            
+
             // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
@@ -482,7 +483,7 @@ function Pedidos() {
                     errorMessage = error.message;
                 }
             }
-            
+
             // Mostrar notificação de erro
             setSnackbar({
                 open: true,
@@ -498,7 +499,7 @@ function Pedidos() {
             await orderService.dispatchOrder(orderId, token);
             // Refresh orders after dispatch
             fetchOrders(token);
-            
+
             // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
@@ -507,7 +508,7 @@ function Pedidos() {
             });
         } catch (error) {
             console.error('Error dispatching order:', error);
-            
+
             // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
@@ -524,7 +525,7 @@ function Pedidos() {
                     errorMessage = error.message;
                 }
             }
-            
+
             // Mostrar notificação de erro
             setSnackbar({
                 open: true,
@@ -540,7 +541,7 @@ function Pedidos() {
             await orderService.dispatchOrderToIfood(orderId, token);
             // Refresh orders after dispatching to iFood
             fetchOrders(token);
-            
+
             // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
@@ -549,7 +550,7 @@ function Pedidos() {
             });
         } catch (error) {
             console.error('Error dispatching order to iFood:', error);
-            
+
             // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
@@ -566,7 +567,7 @@ function Pedidos() {
                     errorMessage = error.message;
                 }
             }
-            
+
             // Mostrar notificação de erro
             setSnackbar({
                 open: true,
@@ -582,7 +583,7 @@ function Pedidos() {
             await orderService.endSeparation(orderId, token);
             // Refresh orders after ending separation
             fetchOrders(token);
-            
+
             // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
@@ -591,7 +592,7 @@ function Pedidos() {
             });
         } catch (error) {
             console.error('Error ending separation:', error);
-            
+
             // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
@@ -608,7 +609,7 @@ function Pedidos() {
                     errorMessage = error.message;
                 }
             }
-            
+
             // Mostrar notificação de erro
             setSnackbar({
                 open: true,
@@ -624,7 +625,7 @@ function Pedidos() {
             await orderService.startSeparation(orderId, token);
             // Refresh orders after starting separation
             fetchOrders(token);
-            
+
             // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
@@ -633,7 +634,7 @@ function Pedidos() {
             });
         } catch (error) {
             console.error('Error starting separation:', error);
-            
+
             // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
@@ -650,7 +651,7 @@ function Pedidos() {
                     errorMessage = error.message;
                 }
             }
-            
+
             // Mostrar notificação de erro
             setSnackbar({
                 open: true,
@@ -668,7 +669,7 @@ function Pedidos() {
             setCompletedActions(prev => new Set(prev).add(orderId));
             // Refresh orders after arriving at destination
             fetchOrders(token);
-            
+
             // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
@@ -677,7 +678,7 @@ function Pedidos() {
             });
         } catch (error) {
             console.error('Error arriving at destination:', error);
-            
+
             // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
@@ -694,7 +695,7 @@ function Pedidos() {
                     errorMessage = error.message;
                 }
             }
-            
+
             // Mostrar notificação de erro
             setSnackbar({
                 open: true,
@@ -710,7 +711,7 @@ function Pedidos() {
             await orderService.requestIfoodDriver(orderId, token);
             // Refresh orders after requesting iFood driver
             fetchOrders(token);
-            
+
             // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
@@ -719,10 +720,10 @@ function Pedidos() {
             });
         } catch (error) {
             console.error('Error requesting iFood driver:', error);
-            
+
             // Tratar mensagens de erro mais comuns
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
-            
+
             if (error.message) {
                 // Verificar se é um erro do iFood com detalhes
                 if (error.message.includes('Failed to request iFood driver')) {
@@ -740,7 +741,7 @@ function Pedidos() {
                     errorMessage = error.message;
                 }
             }
-            
+
             // Mostrar notificação de erro
             setSnackbar({
                 open: true,
@@ -756,7 +757,7 @@ function Pedidos() {
             await orderService.readyToPickup(orderId, token);
             // Refresh orders after marking as ready to pickup
             fetchOrders(token);
-            
+
             // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
@@ -765,7 +766,7 @@ function Pedidos() {
             });
         } catch (error) {
             console.error('Error marking order as ready to pickup:', error);
-            
+
             // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
@@ -782,7 +783,7 @@ function Pedidos() {
                     errorMessage = error.message;
                 }
             }
-            
+
             // Mostrar notificação de erro
             setSnackbar({
                 open: true,
@@ -859,7 +860,7 @@ function Pedidos() {
         if (isWaitingWebhook) {
             return '#2196f3'; // Azul para aguardando webhook
         }
-        
+
         switch (status) {
             case 'Placed':
                 return '#ff9800'; // Laranja para Recebido
@@ -895,7 +896,7 @@ function Pedidos() {
         if (isWaitingWebhook) {
             return 'Aguardando atualização do iFood';
         }
-        
+
         switch (status) {
             case 'Placed':
                 return 'Recebido';
@@ -910,7 +911,7 @@ function Pedidos() {
             case 'READY_TO_PICKUP':
             case 'Ready to Pickup':
             case 'RFI':
-                return 'Pronto para Retirada'; // Usando o mesmo texto para RFI
+                return 'Pronto para Retirada';
             case 'Dispatched':
                 return 'Despachado';
             case 'Arrived':
@@ -925,7 +926,9 @@ function Pedidos() {
         }
     };
 
-    const getAvailableActions = (status, orderId) => {
+    const getAvailableActions = (order) => {
+        const { status, id: orderId, delivery_provider } = order;
+
         switch (status) {
             case 'Placed':
                 return [{ action: 'confirm', label: 'Confirmar Pedido', color: '#4caf50', icon: <CheckIcon /> }]; // Verde
@@ -936,6 +939,9 @@ function Pedidos() {
                 return [{ action: 'endSeparation', label: 'Finalizar Separação', color: '#ff9800', icon: <StopIcon /> }]; // Laranja
             case 'SPE':
             case 'Separation Ended':
+                if (delivery_provider === 'TAKEOUT') {
+                    return [];
+                }
                 return [{ action: 'readyToPickup', label: 'Pronto para Retirada', color: '#9c27b0', icon: <SendIcon /> }]; // Roxo
             case 'READY_TO_PICKUP':
             case 'Ready to Pickup':
@@ -947,7 +953,7 @@ function Pedidos() {
             case 'Dispatched':
                 // Check if the arrive at destination action has already been completed
                 const isArriveCompleted = completedActions.has(orderId);
-                return isArriveCompleted 
+                return isArriveCompleted
                     ? [] // No actions available if already completed
                     : [{ action: 'arriveAtDestination', label: 'Chegou ao Destino', color: '#3f51b5', icon: <PersonIcon /> }]; // Índigo
             default:
@@ -979,8 +985,8 @@ function Pedidos() {
                         <MenuIcon />
                     </IconButton>
                     <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Sysfar HubDelivery - Pedidos
-          </Typography>
+                        Sysfar HubDelivery - Pedidos
+                    </Typography>
                     <Button color="inherit" onClick={handleLogout}>Sair</Button>
                 </Toolbar>
             </AppBar>
@@ -1033,14 +1039,14 @@ function Pedidos() {
                                 Pedidos Recentes
                             </Typography>
                             <Box>
-                                <Button 
-                                    variant="contained" 
+                                <Button
+                                    variant="contained"
                                     onClick={() => {
                                         // Clear filters when refreshing
                                         setSearchTerm('');
                                         setStatusFilter('all');
                                         setPage(0);
-                                        
+
                                         const token = localStorage.getItem('authToken');
                                         if (token) {
                                             fetchOrders(token, false); // Pass false to indicate this is a manual refresh
@@ -1050,8 +1056,8 @@ function Pedidos() {
                                 >
                                     Atualizar
                                 </Button>
-                                <Button 
-                                    variant="outlined" 
+                                <Button
+                                    variant="outlined"
                                     onClick={() => setIsPolling(!isPolling)}
                                 >
                                     {isPolling ? 'Parar Atualização' : 'Iniciar Atualização'}
@@ -1127,31 +1133,31 @@ function Pedidos() {
                                     <Table>
                                         <TableHead>
                                             <TableRow>
-                                                <TableCell 
+                                                <TableCell
                                                     onClick={() => handleSort('id')}
                                                     sx={{ cursor: 'pointer', fontWeight: 'bold' }}
                                                 >
                                                     Nº Pedido {sortBy === 'id' && (sortOrder === 'asc' ? '↑' : '↓')}
                                                 </TableCell>
-                                                <TableCell 
+                                                <TableCell
                                                     onClick={() => handleSort('customer')}
                                                     sx={{ cursor: 'pointer', fontWeight: 'bold' }}
                                                 >
                                                     Cliente {sortBy === 'customer' && (sortOrder === 'asc' ? '↑' : '↓')}
                                                 </TableCell>
-                                                <TableCell 
+                                                <TableCell
                                                     onClick={() => handleSort('total')}
                                                     sx={{ cursor: 'pointer', fontWeight: 'bold' }}
                                                 >
                                                     Total {sortBy === 'total' && (sortOrder === 'asc' ? '↑' : '↓')}
                                                 </TableCell>
-                                                <TableCell 
+                                                <TableCell
                                                     onClick={() => handleSort('status')}
                                                     sx={{ cursor: 'pointer', fontWeight: 'bold' }}
                                                 >
                                                     Status {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
                                                 </TableCell>
-                                                <TableCell 
+                                                <TableCell
                                                     onClick={() => handleSort('createdAt')}
                                                     sx={{ cursor: 'pointer', fontWeight: 'bold' }}
                                                 >
@@ -1165,10 +1171,10 @@ function Pedidos() {
                                                 filteredAndSortedOrders
                                                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                                                     .map((order, index) => {
-                                                        const actions = getAvailableActions(order.status, order.id);
+                                                        const actions = getAvailableActions(order);
                                                         return (
-                                                            <TableRow 
-                                                                key={order.id} 
+                                                            <TableRow
+                                                                key={order.id}
                                                                 sx={{
                                                                     // Zebrada nas linhas
                                                                     backgroundColor: index % 2 === 0 ? 'rgba(0, 0, 0, 0.02)' : 'white',
@@ -1185,7 +1191,7 @@ function Pedidos() {
                                                                 <TableCell>
                                                                     <Chip
                                                                         label={getStatusText(order.status, order.id)}
-                                                                        sx={{ 
+                                                                        sx={{
                                                                             backgroundColor: getStatusColor(order.status, order.id),
                                                                             color: 'white',
                                                                             fontWeight: 'bold'
@@ -1205,7 +1211,7 @@ function Pedidos() {
                                                                                     onClick={() => {
                                                                                         handleActionClick(order.id, action.action, action.label);
                                                                                     }}
-                                                                                    sx={{ 
+                                                                                    sx={{
                                                                                         ml: index > 0 ? 0.5 : 0,
                                                                                         backgroundColor: action.color,
                                                                                         color: 'white',
@@ -1228,7 +1234,7 @@ function Pedidos() {
                                                                             <IconButton
                                                                                 size="small"
                                                                                 disabled
-                                                                                sx={{ 
+                                                                                sx={{
                                                                                     ml: 0.5,
                                                                                     backgroundColor: 'grey.400',
                                                                                     color: 'grey.700',
@@ -1247,7 +1253,7 @@ function Pedidos() {
                                                                         <IconButton
                                                                             size="small"
                                                                             onClick={() => handleViewOrderDetails(order.id)}
-                                                                            sx={{ 
+                                                                            sx={{
                                                                                 ml: 0.5,
                                                                                 backgroundColor: '#2196f3', // Azul
                                                                                 color: 'white',
@@ -1269,7 +1275,7 @@ function Pedidos() {
                                                                             <IconButton
                                                                                 size="small"
                                                                                 disabled
-                                                                                sx={{ 
+                                                                                sx={{
                                                                                     ml: 0.5,
                                                                                     backgroundColor: '#2196f3', // Azul
                                                                                     color: 'white',
@@ -1299,7 +1305,7 @@ function Pedidos() {
                                         </TableBody>
                                     </Table>
                                 </TableContainer>
-                                
+
                                 {/* Pagination */}
                                 <TablePagination
                                     component="div"
@@ -1310,7 +1316,7 @@ function Pedidos() {
                                     onRowsPerPageChange={handleRowsPerPageChange}
                                     rowsPerPageOptions={[5, 10, 20, 50]}
                                     labelRowsPerPage="Itens por página:"
-                                    labelDisplayedRows={({ from, to, count }) => 
+                                    labelDisplayedRows={({ from, to, count }) =>
                                         `${from}-${to} de ${count !== -1 ? count : `mais de ${to}`}`
                                     }
                                 />
@@ -1338,22 +1344,22 @@ function Pedidos() {
                 </Dialog>
 
                 {/* Order Details Modal */}
-                <OrderDetailsModal 
-                    open={orderDetailsModal.open} 
-                    onClose={handleCloseOrderDetails} 
+                <OrderDetailsModal
+                    open={orderDetailsModal.open}
+                    onClose={handleCloseOrderDetails}
                     orderId={orderDetailsModal.orderId}
                 />
-                
+
                 {/* Snackbar for notifications */}
-                <Snackbar 
-                    open={snackbar.open} 
-                    autoHideDuration={6000} 
+                <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={6000}
                     onClose={handleCloseSnackbar}
                     anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
                 >
-                    <MuiAlert 
-                        onClose={handleCloseSnackbar} 
-                        severity={snackbar.severity} 
+                    <MuiAlert
+                        onClose={handleCloseSnackbar}
+                        severity={snackbar.severity}
                         sx={{ width: '100%' }}
                     >
                         {snackbar.message}
