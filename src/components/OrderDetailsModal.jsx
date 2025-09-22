@@ -37,7 +37,10 @@ const getStatusColor = (status) => {
     case 'Concluded':
       return 'default';
     case 'Cancelled':
+    case 'CAR':
       return 'error';
+    case 'CANCELLATION_REQUESTED':
+      return 'warning';
     default:
       return 'default';
   }
@@ -60,7 +63,10 @@ const getStatusText = (status) => {
     case 'Concluded':
       return 'Concluído';
     case 'Cancelled':
+    case 'CAR':
       return 'Cancelado';
+    case 'CANCELLATION_REQUESTED':
+      return 'Cancelamento em andamento';
     default:
       return status;
   }

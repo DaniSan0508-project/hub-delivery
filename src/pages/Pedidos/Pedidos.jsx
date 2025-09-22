@@ -347,6 +347,9 @@ function Pedidos() {
                 } else if (statusFilter === 'RFI') {
                     // Tratar RFI da mesma forma que READY_TO_PICKUP
                     return order.status === 'READY_TO_PICKUP' || order.status === 'Ready to Pickup' || order.status === 'RFI';
+                } else if (statusFilter === 'Cancelled' || statusFilter === 'CAR') {
+                    // Tratar Cancelled e CAR da mesma forma
+                    return order.status === 'Cancelled' || order.status === 'CAR';
                 } else {
                     return order.status === statusFilter;
                 }
@@ -837,7 +840,10 @@ function Pedidos() {
             case 'Concluded':
                 return '#009688'; // Verde-azulado para Concluído
             case 'Cancelled':
+            case 'CAR': // Cancelado
                 return '#f44336'; // Vermelho para Cancelado
+            case 'CANCELLATION_REQUESTED': // Cancelamento em andamento
+                return '#ff9800'; // Laranja para Cancelamento em andamento
             default:
                 return '#9e9e9e'; // Cinza para status desconhecido
         }
@@ -873,7 +879,10 @@ function Pedidos() {
             case 'Concluded':
                 return 'Concluído';
             case 'Cancelled':
+            case 'CAR': // Cancelado
                 return 'Cancelado';
+            case 'CANCELLATION_REQUESTED': // Cancelamento em andamento
+                return 'Cancelamento em andamento';
             default:
                 return status;
         }
@@ -881,6 +890,12 @@ function Pedidos() {
 
     const getAvailableActions = (order) => {
         const { status, id: orderId, delivery_provider } = order;
+        
+        // Verificar se é um pedido com status de cancelamento
+        if (status === 'CANCELLATION_REQUESTED' || status === 'Cancelled' || status === 'CAR') {
+            // Não mostrar ações para pedidos em processo de cancelamento ou já cancelados
+            return [];
+        }
         
         // Verificar se é um pedido TAKEOUT
         const isTakeout = delivery_provider === 'TAKEOUT';
@@ -1083,6 +1098,9 @@ function Pedidos() {
                                                 <MenuItem value="Arrived">Chegou ao Destino</MenuItem>
                                                 <MenuItem value="Arrived at Destination">Chegou ao Destino</MenuItem>
                                                 <MenuItem value="Concluded">Concluído</MenuItem>
+                                                <MenuItem value="CANCELLATION_REQUESTED">Cancelamento em andamento</MenuItem>
+                                                <MenuItem value="Cancelled">Cancelado</MenuItem>
+                                                <MenuItem value="CAR">Cancelado</MenuItem>
                                             </Select>
                                         </FormControl>
                                     </Grid>
