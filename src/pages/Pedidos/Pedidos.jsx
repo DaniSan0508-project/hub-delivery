@@ -661,50 +661,6 @@ function Pedidos() {
         }
     };
 
-    const arriveAtDestination = async (orderId) => {
-        try {
-            const token = localStorage.getItem('authToken');
-            await orderService.arriveAtDestination(orderId, token);
-            // Mark this action as completed to disable the button
-            setCompletedActions(prev => new Set(prev).add(orderId));
-            // Refresh orders after arriving at destination
-            fetchOrders(token);
-
-            // Mostrar notificação de sucesso
-            setSnackbar({
-                open: true,
-                message: 'Chegada ao destino registrada com sucesso!',
-                severity: 'success'
-            });
-        } catch (error) {
-            console.error('Error arriving at destination:', error);
-
-            // Tratamento de erro mais amigável
-            let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
-            if (error.message) {
-                // Mapear mensagens de erro comuns para mensagens mais amigáveis
-                if (error.message.includes('Network Error')) {
-                    errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
-                } else if (error.message.includes('401')) {
-                    errorMessage = 'Sessão expirada. Faça login novamente.';
-                } else if (error.message.includes('403')) {
-                    errorMessage = 'Acesso negado. Você não tem permissão para realizar esta ação.';
-                } else if (error.message.includes('500')) {
-                    errorMessage = 'Erro no servidor. Tente novamente em alguns minutos.';
-                } else {
-                    errorMessage = error.message;
-                }
-            }
-
-            // Mostrar notificação de erro
-            setSnackbar({
-                open: true,
-                message: errorMessage,
-                severity: 'error'
-            });
-        }
-    };
-
     const requestIfoodDriver = async (orderId) => {
         try {
             const token = localStorage.getItem('authToken');
@@ -751,21 +707,21 @@ function Pedidos() {
         }
     };
 
-    const readyToPickup = async (orderId) => {
+    const cancelOrder = async (orderId) => {
         try {
             const token = localStorage.getItem('authToken');
-            await orderService.readyToPickup(orderId, token);
-            // Refresh orders after marking as ready to pickup
+            await orderService.cancelOrder(orderId, token);
+            // Refresh orders after canceling
             fetchOrders(token);
 
             // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
-                message: 'Pedido marcado como pronto para retirada!',
+                message: 'Pedido cancelado com sucesso!',
                 severity: 'success'
             });
         } catch (error) {
-            console.error('Error marking order as ready to pickup:', error);
+            console.error('Error canceling order:', error);
 
             // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
@@ -808,23 +764,20 @@ function Pedidos() {
             case 'endSeparation':
                 await endSeparation(orderId);
                 break;
-            case 'readyToPickup':
-                await readyToPickup(orderId);
-                break;
             case 'dispatch':
                 await dispatchOrder(orderId);
                 break;
             case 'dispatchToIfood':
                 await dispatchOrderToIfood(orderId);
                 break;
-            case 'arriveAtDestination':
-                await arriveAtDestination(orderId);
-                break;
             case 'requestIfoodDriver':
                 await requestIfoodDriver(orderId);
                 break;
             case 'confirm':
                 await confirmOrder(orderId);
+                break;
+            case 'cancel':
+                await cancelOrder(orderId);
                 break;
             default:
                 break;
@@ -928,36 +881,57 @@ function Pedidos() {
 
     const getAvailableActions = (order) => {
         const { status, id: orderId, delivery_provider } = order;
+        
+        // Verificar se é um pedido TAKEOUT
+        const isTakeout = delivery_provider === 'TAKEOUT';
 
-        switch (status) {
-            case 'Placed':
-                return [{ action: 'confirm', label: 'Confirmar Pedido', color: '#4caf50', icon: <CheckIcon /> }]; // Verde
-            case 'Confirmed':
-                return [{ action: 'startSeparation', label: 'Iniciar Separação', color: '#2196f3', icon: <PlayArrowIcon /> }]; // Azul
-            case 'SPS':
-            case 'Separation Started':
-                return [{ action: 'endSeparation', label: 'Finalizar Separação', color: '#ff9800', icon: <StopIcon /> }]; // Laranja
-            case 'SPE':
-            case 'Separation Ended':
-                if (delivery_provider === 'TAKEOUT') {
+        if (isTakeout) {
+            // Fluxo para pedidos TAKEOUT: Confirm → Start Separation → End Separation
+            switch (status) {
+                case 'Placed':
+                    return [
+                        { action: 'confirm', label: 'Confirmar Pedido', color: '#4caf50', icon: <CheckIcon /> }, // Verde
+                        { action: 'cancel', label: 'Cancelar Pedido', color: '#f44336', icon: <StopIcon /> } // Vermelho
+                    ];
+                case 'Confirmed':
+                    return [
+                        { action: 'startSeparation', label: 'Iniciar Separação', color: '#2196f3', icon: <PlayArrowIcon /> }, // Azul
+                        { action: 'cancel', label: 'Cancelar Pedido', color: '#f44336', icon: <StopIcon /> } // Vermelho
+                    ];
+                case 'SPS':
+                case 'Separation Started':
+                    return [
+                        { action: 'endSeparation', label: 'Finalizar Separação', color: '#ff9800', icon: <StopIcon /> }, // Laranja
+                        { action: 'cancel', label: 'Cancelar Pedido', color: '#f44336', icon: <StopIcon /> } // Vermelho
+                    ];
+                default:
                     return [];
-                }
-                return [{ action: 'readyToPickup', label: 'Pronto para Retirada', color: '#9c27b0', icon: <SendIcon /> }]; // Roxo
-            case 'READY_TO_PICKUP':
-            case 'Ready to Pickup':
-            case 'RFI': // Adicionando suporte para status RFI
-                return [
-                    { action: 'dispatch', label: 'Despachar', color: '#ff5722', icon: <SendIcon /> }, // Laranja escuro
-                    { action: 'dispatchToIfood', label: 'Entregador iFood Parceiro', color: '#00bcd4', icon: <LocalShippingIcon /> } // Ciano
-                ];
-            case 'Dispatched':
-                // Check if the arrive at destination action has already been completed
-                const isArriveCompleted = completedActions.has(orderId);
-                return isArriveCompleted
-                    ? [] // No actions available if already completed
-                    : [{ action: 'arriveAtDestination', label: 'Chegou ao Destino', color: '#3f51b5', icon: <PersonIcon /> }]; // Índigo
-            default:
-                return [];
+            }
+        } else {
+            // Fluxo para pedidos não TAKEOUT: Confirm → Start Separation → Dispatch
+            switch (status) {
+                case 'Placed':
+                    return [
+                        { action: 'confirm', label: 'Confirmar Pedido', color: '#4caf50', icon: <CheckIcon /> }, // Verde
+                        { action: 'cancel', label: 'Cancelar Pedido', color: '#f44336', icon: <StopIcon /> } // Vermelho
+                    ];
+                case 'Confirmed':
+                    return [
+                        { action: 'startSeparation', label: 'Iniciar Separação', color: '#2196f3', icon: <PlayArrowIcon /> }, // Azul
+                        { action: 'cancel', label: 'Cancelar Pedido', color: '#f44336', icon: <StopIcon /> } // Vermelho
+                    ];
+                case 'SPS':
+                case 'Separation Started':
+                    return [
+                        { action: 'dispatch', label: 'Despachar', color: '#ff5722', icon: <SendIcon /> }, // Laranja escuro
+                        { action: 'cancel', label: 'Cancelar Pedido', color: '#f44336', icon: <StopIcon /> } // Vermelho
+                    ];
+                case 'Dispatched':
+                    // Para pedidos não TAKEOUT, não mostramos a opção "Chegou ao Destino"
+                    return [];
+                default:
+                    return [];
+            }
         }
     };
 

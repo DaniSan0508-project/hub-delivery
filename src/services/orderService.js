@@ -30,16 +30,6 @@ class OrderService {
         return await api.post(`http://localhost:8090/api/orders/${orderId}/start-separation`, {}, token);
     }
 
-    async endSeparation(orderId, token) {
-        // Usar a rota sem /erp para finalizar separação
-        return await api.post(`http://localhost:8090/api/orders/${orderId}/end-separation`, {}, token);
-    }
-
-    async readyToPickup(orderId, token) {
-        // Nova rota para marcar o pedido como pronto para retirada
-        return await api.post(`http://localhost:8090/api/orders/${orderId}/ready-to-pickup`, {}, token);
-    }
-
     async dispatchOrder(orderId, token) {
         // Usar a rota sem /erp para despachar o pedido
         return await api.post(`http://localhost:8090/api/orders/${orderId}/dispatch`, {}, token);
@@ -55,14 +45,19 @@ class OrderService {
         return await api.post(`http://localhost:8090/api/orders/${orderId}/dispatch-to-ifood`, {}, token);
     }
 
-    async arriveAtDestination(orderId, token) {
-        // Nova rota para indicar chegada ao destino
-        return await api.post(`http://localhost:8090/api/orders/${orderId}/arrive-at-destination`, {}, token);
+    async endSeparation(orderId, token) {
+        // Usar a rota sem /erp para finalizar separação
+        return await api.post(`http://localhost:8090/api/orders/${orderId}/end-separation`, {}, token);
     }
 
     async requestIfoodDriver(orderId, token) {
         // Nova rota para solicitar entregador iFood parceiro
         return await api.post(`http://localhost:8090/api/orders/${orderId}/request-ifood-driver`, {}, token);
+    }
+
+    async cancelOrder(orderId, token) {
+        const reasonData = { reason: "Cancelado pelo cliente" };
+        return await api.post(`http://localhost:8090/api/orders/${orderId}/cancel-order`, reasonData, token);
     }
 
     async addOrderItem(orderId, itemData, token) {
