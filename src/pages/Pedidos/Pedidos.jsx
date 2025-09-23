@@ -210,7 +210,7 @@ function Pedidos() {
                     customer: order.consumer.name,
                     status: order.order.status || 'CONFIRMED', // Default to 'CONFIRMED' if status is not provided
                     total: items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0),
-                    createdAt: 'Horário não disponível', // API doesn't provide this yet
+                    createdAt: order.order.created_at || 'Horário não disponível', // Usar horário retornado pela API
                     delivery_provider: order.order.delivery_provider
                 };
             }).filter(order => order !== null); // Remover pedidos inválidos
