@@ -248,7 +248,7 @@ const OrderDetailsModal = ({ open, onClose, orderId }) => {
                                     <PaymentBadge payment={orderData.order.payment} />
 
                                     <Typography variant="body2">
-                                        Valor: R$ {orderData.order.payment?.amount?.toFixed(2).replace('.', ',')}
+                                        Valor: R$ {parseFloat(orderData.order.payment?.amount)?.toFixed(2).replace('.', ',')}
                                     </Typography>
 
                                     <Typography variant="body2" color="text.secondary">
