@@ -25,6 +25,7 @@ import {
     Grid,
     LinearProgress
 } from '@mui/material';
+import { AccessTime as AccessTimeIcon, Kitchen as KitchenIcon, DeliveryDining as DeliveryDiningIcon } from '@mui/icons-material';
 import orderService from '../services/orderService';
 
 // Componente para exibir informações de pagamento
