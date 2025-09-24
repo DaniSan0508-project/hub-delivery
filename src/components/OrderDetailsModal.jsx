@@ -21,7 +21,9 @@ import {
     CardContent,
     List,
     ListItem,
-    ListItemText
+    ListItemText,
+    Grid,
+    LinearProgress
 } from '@mui/material';
 import orderService from '../services/orderService';
 
@@ -82,6 +84,151 @@ const CashChangeInfo = ({ payment }) => {
             <Typography variant="caption" color="warning.main">
                 💵 Troco para: R$ {payment.cash_change_for?.toFixed(2).replace('.', ',') || '0,00'}
             </Typography>
+        </Box>
+    );
+};
+
+// Componente para identificar pedidos agendados
+const ScheduledOrderBadge = ({ order }) => {
+    if (!order?.is_scheduled) return null;
+
+    return (
+        <Chip 
+            icon={<AccessTimeIcon />}
+            label="Pedido Agendado"
+            color="warning"
+            variant="filled"
+            size="small"
+            sx={{ mb: 1 }}
+        />
+    );
+};
+
+// Função para formatar hora de forma amigável
+const formatTime = (dateTimeStr) => {
+    if (!dateTimeStr) return 'N/A';
+    const date = new Date(dateTimeStr);
+    return date.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'America/Sao_Paulo'
+    });
+};
+
+// Função para calcular tempo restante
+const getTimeStatus = (order) => {
+    if (!order?.preparation_start_time || !order?.delivery_window?.start) return 'Horário não definido';
+    
+    const now = new Date();
+    const prepStart = new Date(order.preparation_start_time);
+    const deliveryStart = new Date(order.delivery_window.start);
+    
+    if (now < prepStart) {
+        const diffHours = Math.ceil((prepStart - now) / (1000 * 60 * 60));
+        return `Preparo inicia em ${diffHours}h`;
+    } else if (now < deliveryStart) {
+        return "Em preparação";
+    } else {
+        return "Pronto para entrega";
+    }
+};
+
+// Função auxiliar para calcular progresso
+const calculateProgress = (order) => {
+    if (!order?.preparation_start_time || !order?.delivery_window?.end) return 0;
+    
+    const now = new Date();
+    const prepStart = new Date(order.preparation_start_time);
+    const deliveryEnd = new Date(order.delivery_window.end);
+    
+    const totalTime = deliveryEnd - prepStart;
+    const elapsed = now - prepStart;
+    
+    if (elapsed <= 0) return 0;
+    if (elapsed >= totalTime) return 100;
+    
+    return Math.min(100, Math.max(0, (elapsed / totalTime) * 100));
+};
+
+const getProgressLabel = (order) => {
+    if (!order) return "Informações insuficientes";
+    
+    const progress = calculateProgress(order);
+    if (progress === 0) return "Aguardando início do preparo";
+    if (progress < 50) return "Em preparação";
+    if (progress < 100) return "Pronto para entrega";
+    return "Janela de entrega encerrada";
+};
+
+// Componente para exibir as janelas de tempo de forma amigável
+const TimeWindowDisplay = ({ order }) => {
+    if (!order?.is_scheduled) return null;
+
+    // Alerta para quando o tempo de preparo já deveria ter começado
+    const showUrgentAlert = order.preparation_start_time && 
+        new Date() > new Date(order.preparation_start_time);
+
+    return (
+        <Box sx={{ 
+            p: 2, 
+            bgcolor: 'warning.light', 
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'warning.main',
+            mb: 2
+        }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                ⏰ Pedido Agendado - {getTimeStatus(order)}
+            </Typography>
+            
+            {/* Alerta para pedidos que precisam de atenção */}
+            {showUrgentAlert && (
+                <Alert severity="warning" sx={{ mt: 1, mb: 2 }}>
+                    ⚠️ Preparo deveria ter iniciado
+                </Alert>
+            )}
+            
+            <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <KitchenIcon color="primary" />
+                        <Box>
+                            <Typography variant="caption" display="block" color="text.secondary">
+                                Início do Preparo
+                            </Typography>
+                            <Typography variant="body2" fontWeight="medium">
+                                {formatTime(order.preparation_start_time)}
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <DeliveryDiningIcon color="primary" />
+                        <Box>
+                            <Typography variant="caption" display="block" color="text.secondary">
+                                Janela de Entrega
+                            </Typography>
+                            <Typography variant="body2" fontWeight="medium">
+                                {formatTime(order.delivery_window?.start)} - {formatTime(order.delivery_window?.end)}
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Grid>
+            </Grid>
+            
+            {/* Barra de progresso visual */}
+            <Box sx={{ mt: 2 }}>
+                <LinearProgress 
+                    variant="determinate" 
+                    value={calculateProgress(order)}
+                    color="warning"
+                />
+                <Typography variant="caption" display="block" textAlign="center" mt={0.5}>
+                    {getProgressLabel(order)}
+                </Typography>
+            </Box>
         </Box>
     );
 };
@@ -201,38 +348,61 @@ const OrderDetailsModal = ({ open, onClose, orderId }) => {
                 ) : orderData ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
                         {/* Order Info */}
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Box>
-                                <Typography variant="h6">
-                                    Cliente: {orderData.consumer?.name || 'Não informado'}
-                                </Typography>
-                                <Typography variant="body2">
-                                    Documento: {orderData.consumer?.document?.type || ''} {orderData.consumer?.document?.number || ''}
-                                </Typography>
+                        <Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                <Box>
+                                    <Typography variant="h6">
+                                        Cliente: {orderData.consumer?.name || 'Não informado'}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        Documento: {orderData.consumer?.document?.type || ''} {orderData.consumer?.document?.number || ''}
+                                    </Typography>
+                                    <ScheduledOrderBadge order={orderData.order} />
+                                </Box>
                                 <Chip
                                     label={getStatusText(orderData.order?.status)}
                                     color={getStatusColor(orderData.order?.status)}
                                     size="small"
-                                    sx={{ mt: 1 }}
                                 />
-                                {/* Adicionar códigos do pedido */}
+                            </Box>
+                            
+                            {/* SEÇÃO DE AGENDAMENTO - APENAS PARA PEDIDOS AGENDADOS */}
+                            {orderData.order?.is_scheduled && (
+                                <TimeWindowDisplay order={orderData.order} />
+                            )}
+                            
+                            {/* Adicionar códigos do pedido */}
+                            <Box sx={{ display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap' }}>
                                 {orderData.order?.pickup_code && (
-                                    <Typography variant="body2" sx={{ mt: 1 }}>
-                                        <strong>Código de Retirada:</strong> {orderData.order.pickup_code}
-                                    </Typography>
+                                    <Chip 
+                                        label={`Retirada: ${orderData.order.pickup_code}`} 
+                                        variant="outlined" 
+                                        size="small" 
+                                    />
                                 )}
                                 {orderData.order?.short_code && (
-                                    <Typography variant="body2" sx={{ mt: 1 }}>
-                                        <strong>Código do Pedido:</strong> {orderData.order.short_code}
-                                    </Typography>
+                                    <Chip 
+                                        label={`Pedido: ${orderData.order.short_code}`} 
+                                        variant="outlined" 
+                                        size="small" 
+                                    />
                                 )}
                                 {orderData.order?.delivery_code && (
-                                    <Typography variant="body2" sx={{ mt: 1 }}>
-                                        <strong>Código de Entrega:</strong> {orderData.order.delivery_code}
-                                    </Typography>
+                                    <Chip 
+                                        label={`Entrega: ${orderData.order.delivery_code}`} 
+                                        variant="outlined" 
+                                        size="small" 
+                                    />
+                                )}
+                                {orderData.order?.customer_code && (
+                                    <Chip 
+                                        label={`Cliente: ${orderData.order.customer_code}`} 
+                                        variant="outlined" 
+                                        size="small" 
+                                    />
                                 )}
                             </Box>
-                            <Typography variant="h6">
+                            <Typography variant="h6" sx={{ mt: 1 }}>
                                 Total: R$ {calculateOrderTotal(orderData.order?.items).toFixed(2).replace('.', ',')}
                             </Typography>
                         </Box>

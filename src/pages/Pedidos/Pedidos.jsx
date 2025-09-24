@@ -39,7 +39,8 @@ import {
     CardContent,
     List,
     ListItem,
-    ListItemText
+    ListItemText,
+    LinearProgress
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -51,7 +52,10 @@ import {
     Stop as StopIcon,
     Send as SendIcon,
     LocalShipping as LocalShippingIcon,
-    Person as PersonIcon
+    Person as PersonIcon,
+    AccessTime as AccessTimeIcon,
+    Kitchen as KitchenIcon,
+    DeliveryDining as DeliveryDiningIcon
 } from '@mui/icons-material';
 import { Alert as MuiAlert } from '@mui/material';
 import Sidebar from '../../components/Sidebar';
@@ -121,6 +125,151 @@ const CashChangeInfo = ({ payment }) => {
     );
 };
 
+// Componente para identificar pedidos agendados
+const ScheduledOrderBadge = ({ order }) => {
+    if (!order.is_scheduled) return null;
+
+    return (
+        <Chip 
+            icon={<AccessTimeIcon />}
+            label="Pedido Agendado"
+            color="warning"
+            variant="filled"
+            size="small"
+            sx={{ mb: 1 }}
+        />
+    );
+};
+
+// Função para formatar hora de forma amigável
+const formatTime = (dateTimeStr) => {
+    if (!dateTimeStr) return 'N/A';
+    const date = new Date(dateTimeStr);
+    return date.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'America/Sao_Paulo'
+    });
+};
+
+// Função para calcular tempo restante
+const getTimeStatus = (order) => {
+    if (!order?.preparation_start_time || !order?.delivery_window?.start) return 'Horário não definido';
+    
+    const now = new Date();
+    const prepStart = new Date(order.preparation_start_time);
+    const deliveryStart = new Date(order.delivery_window.start);
+    
+    if (now < prepStart) {
+        const diffHours = Math.ceil((prepStart - now) / (1000 * 60 * 60));
+        return `Preparo inicia em ${diffHours}h`;
+    } else if (now < deliveryStart) {
+        return "Em preparação";
+    } else {
+        return "Pronto para entrega";
+    }
+};
+
+// Função auxiliar para calcular progresso
+const calculateProgress = (order) => {
+    if (!order?.preparation_start_time || !order?.delivery_window?.end) return 0;
+    
+    const now = new Date();
+    const prepStart = new Date(order.preparation_start_time);
+    const deliveryEnd = new Date(order.delivery_window.end);
+    
+    const totalTime = deliveryEnd - prepStart;
+    const elapsed = now - prepStart;
+    
+    if (elapsed <= 0) return 0;
+    if (elapsed >= totalTime) return 100;
+    
+    return Math.min(100, Math.max(0, (elapsed / totalTime) * 100));
+};
+
+const getProgressLabel = (order) => {
+    if (!order) return "Informações insuficientes";
+    
+    const progress = calculateProgress(order);
+    if (progress === 0) return "Aguardando início do preparo";
+    if (progress < 50) return "Em preparação";
+    if (progress < 100) return "Pronto para entrega";
+    return "Janela de entrega encerrada";
+};
+
+// Componente para exibir as janelas de tempo de forma amigável
+const TimeWindowDisplay = ({ order }) => {
+    if (!order.is_scheduled) return null;
+
+    // Alerta para quando o tempo de preparo já deveria ter começado
+    const showUrgentAlert = order.preparation_start_time && 
+        new Date() > new Date(order.preparation_start_time);
+
+    return (
+        <Box sx={{ 
+            p: 2, 
+            bgcolor: 'warning.light', 
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'warning.main',
+            mb: 2
+        }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                ⏰ Pedido Agendado - {getTimeStatus(order)}
+            </Typography>
+            
+            {/* Alerta para pedidos que precisam de atenção */}
+            {showUrgentAlert && (
+                <Alert severity="warning" sx={{ mt: 1, mb: 2 }}>
+                    ⚠️ Preparo deveria ter iniciado
+                </Alert>
+            )}
+            
+            <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <KitchenIcon color="primary" />
+                        <Box>
+                            <Typography variant="caption" display="block" color="text.secondary">
+                                Início do Preparo
+                            </Typography>
+                            <Typography variant="body2" fontWeight="medium">
+                                {formatTime(order.preparation_start_time)}
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <DeliveryDiningIcon color="primary" />
+                        <Box>
+                            <Typography variant="caption" display="block" color="text.secondary">
+                                Janela de Entrega
+                            </Typography>
+                            <Typography variant="body2" fontWeight="medium">
+                                {formatTime(order.delivery_window?.start)} - {formatTime(order.delivery_window?.end)}
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Grid>
+            </Grid>
+            
+            {/* Barra de progresso visual */}
+            <Box sx={{ mt: 2 }}>
+                <LinearProgress 
+                    variant="determinate" 
+                    value={calculateProgress(order)}
+                    color="warning"
+                />
+                <Typography variant="caption" display="block" textAlign="center" mt={0.5}>
+                    {getProgressLabel(order)}
+                </Typography>
+            </Box>
+        </Box>
+    );
+};
+
 function Pedidos() {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
@@ -143,6 +292,7 @@ function Pedidos() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [paymentFilter, setPaymentFilter] = useState('all'); // Novo filtro para pagamento
+    const [orderTypeFilter, setOrderTypeFilter] = useState('all'); // Filtro para tipo de pedido
     const [sortBy, setSortBy] = useState('createdAt'); // Default sort by creation date
     const [sortOrder, setSortOrder] = useState('desc'); // Default descending (newest first)
 
@@ -237,7 +387,16 @@ function Pedidos() {
                     createdAt: order.order.created_at || 'Horário não disponível', // Usar horário retornado pela API
                     delivery_provider: order.order.delivery_provider,
                     // Manter as informações de pagamento
-                    payment: order.order.payment
+                    payment: order.order.payment,
+                    // Adicionar informações de agendamento
+                    is_scheduled: order.order.is_scheduled,
+                    scheduling_type: order.order.scheduling_type,
+                    delivery_window: order.order.delivery_window,
+                    preparation_start_time: order.order.preparation_start_time,
+                    short_code: order.order.short_code,
+                    delivery_code: order.order.delivery_code,
+                    pickup_code: order.order.pickup_code,
+                    customer_code: order.order.customer_code
                 };
             }).filter(order => order !== null); // Remover pedidos inválidos
 
@@ -442,6 +601,15 @@ function Pedidos() {
                 }
             }
 
+            // Apply order type filter
+            if (orderTypeFilter !== 'all') {
+                if (orderTypeFilter === 'scheduled') {
+                    return order.is_scheduled === true;
+                } else if (orderTypeFilter === 'immediate') {
+                    return !order.is_scheduled || order.is_scheduled === false;
+                }
+            }
+
             return true;
         })
         .sort((a, b) => {
@@ -498,6 +666,30 @@ function Pedidos() {
             const dateB = new Date(b.createdAt);
             return dateB - dateA;
         });
+        
+    // Função para ordenar pedidos agendados
+    const sortScheduledOrders = (ordersList) => {
+        return [...ordersList].sort((a, b) => {
+            // Priorizar pedidos agendados em relação aos imediatos
+            if (a.is_scheduled && !b.is_scheduled) return -1;
+            if (!a.is_scheduled && b.is_scheduled) return 1;
+            
+            // Se ambos forem agendados, ordenar por horário de preparo
+            if (a.is_scheduled && b.is_scheduled) {
+                const prepA = new Date(a.preparation_start_time);
+                const prepB = new Date(b.preparation_start_time);
+                return prepA - prepB;
+            }
+            
+            // Caso contrário, manter a ordenação original (por data de criação)
+            const dateA = new Date(a.createdAt);
+            const dateB = new Date(b.createdAt);
+            return dateB - dateA;
+        });
+    };
+
+    // Usar ordenação específica para pedidos agendados
+    const orderedOrders = orderTypeFilter === 'scheduled' ? sortScheduledOrders(filteredAndSortedOrders) : filteredAndSortedOrders;
 
 
 
@@ -1174,205 +1366,172 @@ function Pedidos() {
                                     </Grid>
                                     <Grid item xs={12} md={3}>
                                         <FormControl fullWidth size="small">
-                                            <InputLabel>Itens por página</InputLabel>
+                                            <InputLabel>Tipo de Pedido</InputLabel>
                                             <Select
-                                                value={rowsPerPage}
-                                                label="Itens por página"
-                                                onChange={handleRowsPerPageChange}
+                                                value={orderTypeFilter}
+                                                label="Tipo de Pedido"
+                                                onChange={(e) => setOrderTypeFilter(e.target.value)}
                                             >
-                                                <MenuItem value={5}>5</MenuItem>
-                                                <MenuItem value={10}>10</MenuItem>
-                                                <MenuItem value={20}>20</MenuItem>
-                                                <MenuItem value={50}>50</MenuItem>
+                                                <MenuItem value="all">Todos os Pedidos</MenuItem>
+                                                <MenuItem value="scheduled">Pedidos Agendados</MenuItem>
+                                                <MenuItem value="immediate">Pedidos Imediatos</MenuItem>
                                             </Select>
                                         </FormControl>
                                     </Grid>
                                 </Grid>
 
-                                <TableContainer>
-                                    <Table>
-                                        <TableHead>
-                                            <TableRow>
-                                                <TableCell
-                                                    onClick={() => handleSort('id')}
-                                                    sx={{ cursor: 'pointer', fontWeight: 'bold' }}
-                                                >
-                                                    Nº Pedido {sortBy === 'id' && (sortOrder === 'asc' ? '↑' : '↓')}
-                                                </TableCell>
-                                                <TableCell
-                                                    onClick={() => handleSort('customer')}
-                                                    sx={{ cursor: 'pointer', fontWeight: 'bold' }}
-                                                >
-                                                    Cliente {sortBy === 'customer' && (sortOrder === 'asc' ? '↑' : '↓')}
-                                                </TableCell>
-                                                <TableCell
-                                                    onClick={() => handleSort('total')}
-                                                    sx={{ cursor: 'pointer', fontWeight: 'bold' }}
-                                                >
-                                                    Total {sortBy === 'total' && (sortOrder === 'asc' ? '↑' : '↓')}
-                                                </TableCell>
-                                                <TableCell
-                                                    onClick={() => handleSort('status')}
-                                                    sx={{ cursor: 'pointer', fontWeight: 'bold' }}
-                                                >
-                                                    Status {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
-                                                </TableCell>
-                                                <TableCell
-                                                    onClick={() => handleSort('createdAt')}
-                                                    sx={{ cursor: 'pointer', fontWeight: 'bold' }}
-                                                >
-                                                    Horário {sortBy === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
-                                                </TableCell>
-                                                <TableCell
-                                                    sx={{ cursor: 'pointer', fontWeight: 'bold' }}
-                                                >
-                                                    Pagamento
-                                                </TableCell>
-                                                <TableCell>Ações</TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {filteredAndSortedOrders.length > 0 ? (
-                                                filteredAndSortedOrders
-                                                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                                                    .map((order, index) => {
-                                                        const actions = getAvailableActions(order);
-                                                        return (
-                                                            <TableRow
-                                                                key={order.id}
-                                                                sx={{
-                                                                    // Zebrada nas linhas
-                                                                    backgroundColor: index % 2 === 0 ? 'rgba(0, 0, 0, 0.02)' : 'white',
-                                                                    '&:hover': {
-                                                                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <TableCell>#{order.id.substring(0, 8)}</TableCell>
-                                                                <TableCell>{order.customer || 'Cliente não informado'}</TableCell>
-                                                                <TableCell>
-                                                                    R$ {parseFloat(order.total).toFixed(2).replace('.', ',')}
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <Chip
-                                                                        label={getStatusText(order.status, order.id)}
-                                                                        sx={{
-                                                                            backgroundColor: getStatusColor(order.status, order.id),
-                                                                            color: 'white',
-                                                                            fontWeight: 'bold'
-                                                                        }}
-                                                                        size="small"
+                                <Box>
+                                    {orderedOrders.length > 0 ? (
+                                        orderedOrders
+                                            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                                            .map((order, index) => {
+                                                const actions = getAvailableActions(order);
+                                                return (
+                                                    <Card key={order.id} sx={{ 
+                                                        mb: 2, 
+                                                        border: order.is_scheduled ? '2px solid' : '1px solid',
+                                                        borderColor: order.is_scheduled ? 'warning.main' : 'divider'
+                                                    }}>
+                                                        <CardContent>
+                                                            {/* Cabeçalho com badge de agendado */}
+                                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                                                <Box>
+                                                                    <Typography variant="h6">Pedido #{order.id.substring(0, 8)}</Typography>
+                                                                    <ScheduledOrderBadge order={order} />
+                                                                </Box>
+                                                                <Chip 
+                                                                    label={getStatusText(order.status, order.id)}
+                                                                    sx={{
+                                                                        backgroundColor: getStatusColor(order.status, order.id),
+                                                                        color: 'white',
+                                                                        fontWeight: 'bold'
+                                                                    }}
+                                                                    size="small"
+                                                                />
+                                                            </Box>
+                                                            
+                                                            {/* SEÇÃO DE AGENDAMENTO - APENAS PARA PEDIDOS AGENDADOS */}
+                                                            {order.is_scheduled && (
+                                                                <TimeWindowDisplay order={order} />
+                                                            )}
+                                                            
+                                                            {/* SEÇÃO DE PAGAMENTO */}
+                                                            <Box sx={{ mb: 2, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                                                <PaymentBadge payment={order.payment} />
+                                                                <CashChangeInfo payment={order.payment} />
+                                                                <Typography variant="body2" sx={{ mt: 1 }}>
+                                                                    <strong>Valor Total:</strong> R$ {parseFloat(order.total).toFixed(2).replace('.', ',')}
+                                                                </Typography>
+                                                            </Box>
+                                                            
+                                                            {/* Informações do cliente */}
+                                                            <Typography variant="body2">
+                                                                <strong>Cliente:</strong> {order.customer || 'Cliente não informado'}
+                                                            </Typography>
+                                                            
+                                                            {/* Códigos de entrega/retirada */}
+                                                            <Box sx={{ display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap' }}>
+                                                                {order.delivery_code && (
+                                                                    <Chip 
+                                                                        label={`Entrega: ${order.delivery_code}`} 
+                                                                        variant="outlined" 
+                                                                        size="small" 
                                                                     />
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    {order.createdAt || 'Horário não informado'}
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <PaymentBadge payment={order.payment} />
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    {actions.length > 0 ? (
-                                                                        actions.map((action, index) => (
-                                                                            <Tooltip key={index} title={action.label}>
-                                                                                <IconButton
-                                                                                    size="small"
-                                                                                    onClick={() => {
-                                                                                        handleActionClick(order.id, action.action, action.label);
-                                                                                    }}
-                                                                                    sx={{
-                                                                                        ml: index > 0 ? 0.5 : 0,
-                                                                                        backgroundColor: action.color,
-                                                                                        color: 'white',
-                                                                                        '&:hover': {
-                                                                                            backgroundColor: `${action.color}dd`, // Opacidade um pouco menor no hover
-                                                                                        },
-                                                                                        width: 32,
-                                                                                        height: 32,
-                                                                                        '& .MuiSvgIcon-root': {
-                                                                                            fontSize: 16
-                                                                                        }
-                                                                                    }}
-                                                                                >
-                                                                                    {action.icon}
-                                                                                </IconButton>
-                                                                            </Tooltip>
-                                                                        ))
-                                                                    ) : (
-                                                                        <Tooltip title="Nenhuma ação disponível">
-                                                                            <IconButton
-                                                                                size="small"
-                                                                                disabled
-                                                                                sx={{
-                                                                                    ml: 0.5,
-                                                                                    backgroundColor: 'grey.400',
-                                                                                    color: 'grey.700',
-                                                                                    width: 32,
-                                                                                    height: 32,
-                                                                                    '& .MuiSvgIcon-root': {
-                                                                                        fontSize: 16
-                                                                                    }
+                                                                )}
+                                                                {order.pickup_code && (
+                                                                    <Chip 
+                                                                        label={`Retirada: ${order.pickup_code}`} 
+                                                                        variant="outlined" 
+                                                                        size="small" 
+                                                                    />
+                                                                )}
+                                                                {order.customer_code && (
+                                                                    <Chip 
+                                                                        label={`Cliente: ${order.customer_code}`} 
+                                                                        variant="outlined" 
+                                                                        size="small" 
+                                                                    />
+                                                                )}
+                                                            </Box>
+                                                            
+                                                            {/* Ações do pedido */}
+                                                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+                                                                {actions.length > 0 ? (
+                                                                    actions.map((action, idx) => (
+                                                                        <Tooltip key={idx} title={action.label}>
+                                                                            <Button
+                                                                                variant="contained"
+                                                                                onClick={() => {
+                                                                                    handleActionClick(order.id, action.action, action.label);
                                                                                 }}
-                                                                            >
-                                                                                <StopIcon />
-                                                                            </IconButton>
-                                                                        </Tooltip>
-                                                                    )}
-                                                                    <Tooltip title="Ver Detalhes">
-                                                                        <IconButton
-                                                                            size="small"
-                                                                            onClick={() => handleViewOrderDetails(order.id)}
-                                                                            sx={{
-                                                                                ml: 0.5,
-                                                                                backgroundColor: '#2196f3', // Azul
-                                                                                color: 'white',
-                                                                                '&:hover': {
-                                                                                    backgroundColor: '#1976d2', // Azul mais escuro
-                                                                                },
-                                                                                width: 32,
-                                                                                height: 32,
-                                                                                '& .MuiSvgIcon-root': {
-                                                                                    fontSize: 16
-                                                                                }
-                                                                            }}
-                                                                        >
-                                                                            <VisibilityIcon />
-                                                                        </IconButton>
-                                                                    </Tooltip>
-                                                                    {order.status === 'Dispatched' && completedActions.has(order.id) && (
-                                                                        <Tooltip title="Aguardando iFood">
-                                                                            <IconButton
-                                                                                size="small"
-                                                                                disabled
                                                                                 sx={{
-                                                                                    ml: 0.5,
-                                                                                    backgroundColor: '#2196f3', // Azul
+                                                                                    backgroundColor: action.color,
                                                                                     color: 'white',
-                                                                                    width: 32,
-                                                                                    height: 32,
-                                                                                    '& .MuiCircularProgress-root': {
-                                                                                        width: 16,
-                                                                                        height: 16
+                                                                                    '&:hover': {
+                                                                                        backgroundColor: `${action.color}dd`, // Opacidade um pouco menor no hover
+                                                                                    },
+                                                                                    minWidth: 'auto',
+                                                                                    height: 36,
+                                                                                    '& .MuiSvgIcon-root': {
+                                                                                        fontSize: 20
                                                                                     }
                                                                                 }}
+                                                                                startIcon={action.icon}
+                                                                                size="small"
                                                                             >
-                                                                                <CircularProgress size={16} color="inherit" />
-                                                                            </IconButton>
+                                                                                {action.label}
+                                                                            </Button>
                                                                         </Tooltip>
-                                                                    )}
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        );
-                                                    })
-                                            ) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={7} align="center">
-                                                        Nenhum pedido encontrado
-                                                    </TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
+                                                                    ))
+                                                                ) : (
+                                                                    <Button
+                                                                        variant="outlined"
+                                                                        disabled
+                                                                        size="small"
+                                                                        sx={{ minWidth: 'auto', height: 36 }}
+                                                                    >
+                                                                        Nenhuma ação
+                                                                    </Button>
+                                                                )}
+                                                                <Button
+                                                                    variant="outlined"
+                                                                    onClick={() => handleViewOrderDetails(order.id)}
+                                                                    sx={{ minWidth: 'auto', height: 36 }}
+                                                                    startIcon={<VisibilityIcon />}
+                                                                    size="small"
+                                                                >
+                                                                    Detalhes
+                                                                </Button>
+                                                                {order.status === 'Dispatched' && completedActions.has(order.id) && (
+                                                                    <Tooltip title="Aguardando iFood">
+                                                                        <Box sx={{ 
+                                                                            ml: 1, 
+                                                                            display: 'flex', 
+                                                                            alignItems: 'center',
+                                                                            backgroundColor: '#2196f3',
+                                                                            color: 'white',
+                                                                            borderRadius: 1,
+                                                                            px: 1,
+                                                                            height: 36
+                                                                        }}>
+                                                                            <CircularProgress size={20} color="inherit" />
+                                                                            <Typography variant="caption" sx={{ ml: 1, color: 'white' }}>
+                                                                                Aguardando iFood
+                                                                            </Typography>
+                                                                        </Box>
+                                                                    </Tooltip>
+                                                                )}
+                                                            </Box>
+                                                        </CardContent>
+                                                    </Card>
+                                                );
+                                            })
+                                    ) : (
+                                        <Typography variant="body1" align="center" sx={{ py: 4 }}>
+                                            Nenhum pedido encontrado
+                                        </Typography>
+                                    )}
+                                </Box>
 
                                 {/* Pagination */}
                                 <TablePagination
