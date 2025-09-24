@@ -16,9 +16,75 @@ import {
     TableRow,
     Paper,
     CircularProgress,
-    Chip
+    Chip,
+    Card,
+    CardContent,
+    List,
+    ListItem,
+    ListItemText
 } from '@mui/material';
 import orderService from '../services/orderService';
+
+// Componente para exibir informações de pagamento
+const PaymentBadge = ({ payment }) => {
+    if (!payment) return null;
+
+    const getPaymentConfig = () => {
+        const isOnline = !payment.in_person;
+        const method = payment.method;
+
+        if (method === 'CASH') {
+            return {
+                label: `Dinheiro ${isOnline ? '(Online)' : '(Na Entrega)'}`,
+                color: isOnline ? 'success' : 'warning',
+                icon: '💰'
+            };
+        }
+
+        if (method === 'CREDIT') {
+            return {
+                label: `Crédito ${isOnline ? '(Online)' : '(Na Entrega)'}`,
+                color: isOnline ? 'success' : 'warning',
+                icon: '💳'
+            };
+        }
+
+        if (method === 'DEBIT') {
+            return {
+                label: `Débito ${isOnline ? '(Online)' : '(Na Entrega)'}`,
+                color: isOnline ? 'success' : 'warning',
+                icon: '💳'
+            };
+        }
+
+        return { label: method, color: 'default', icon: 'Não informado' };
+    };
+
+    const config = getPaymentConfig();
+
+    return (
+        <Chip
+            icon={<span>{config.icon}</span>}
+            label={config.label}
+            color={config.color}
+            variant="outlined"
+            size="small"
+        />
+    );
+};
+
+// Componente para exibir informações de troco
+const CashChangeInfo = ({ payment }) => {
+    if (!payment?.requires_cash_change) return null;
+
+    return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+            <Typography variant="caption" color="warning.main">
+                💵 Troco para: R$ {payment.cash_change_for?.toFixed(2).replace('.', ',') || '0,00'}
+            </Typography>
+        </Box>
+    );
+};
 
 const getStatusColor = (status) => {
     switch (status) {
@@ -61,6 +127,8 @@ const getStatusText = (status) => {
         case 'Dispatched':
             return 'Despachado';
         case 'Concluded':
+            return 'Concluído';
+        case 'DDCS':
             return 'Concluído';
         case 'Cancelled':
         case 'CAR':
@@ -168,6 +236,29 @@ const OrderDetailsModal = ({ open, onClose, orderId }) => {
                                 Total: R$ {calculateOrderTotal(orderData.order?.items).toFixed(2).replace('.', ',')}
                             </Typography>
                         </Box>
+
+                        {/* Payment Information */}
+                        {orderData.order?.payment && (
+                            <Card sx={{ mb: 2, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                    💰 Informações de Pagamento
+                                </Typography>
+
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                                    <PaymentBadge payment={orderData.order.payment} />
+
+                                    <Typography variant="body2">
+                                        Valor: R$ {orderData.order.payment?.amount?.toFixed(2).replace('.', ',')}
+                                    </Typography>
+
+                                    <Typography variant="body2" color="text.secondary">
+                                        Responsável: {orderData.order.payment?.liability === 'IFOOD' ? 'iFood' : 'Estabelecimento'}
+                                    </Typography>
+                                </Box>
+
+                                <CashChangeInfo payment={orderData.order.payment} />
+                            </Card>
+                        )}
 
                         {/* Items Table */}
                         <Typography variant="h6" gutterBottom>

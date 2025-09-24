@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Typography,
@@ -34,7 +34,12 @@ import {
     ToggleButton,
     ToggleButtonGroup,
     Tooltip,
-    Snackbar
+    Snackbar,
+    Card,
+    CardContent,
+    List,
+    ListItem,
+    ListItemText
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -54,6 +59,67 @@ import orderService from '../../services/orderService';
 import OrderDetailsModal from '../../components/OrderDetailsModal';
 
 const drawerWidth = 240;
+
+// Componente para exibir informações de pagamento
+const PaymentBadge = ({ payment }) => {
+    if (!payment) return null;
+
+    const getPaymentConfig = () => {
+        const isOnline = !payment.in_person;
+        const method = payment.method;
+
+        if (method === 'CASH') {
+            return {
+                label: `Dinheiro ${isOnline ? '(Online)' : '(Na Entrega)'}`,
+                color: isOnline ? 'success' : 'warning',
+                icon: '💰'
+            };
+        }
+
+        if (method === 'CREDIT') {
+            return {
+                label: `Crédito ${isOnline ? '(Online)' : '(Na Entrega)'}`,
+                color: isOnline ? 'success' : 'warning',
+                icon: '💳'
+            };
+        }
+
+        if (method === 'DEBIT') {
+            return {
+                label: `Débito ${isOnline ? '(Online)' : '(Na Entrega)'}`,
+                color: isOnline ? 'success' : 'warning',
+                icon: '💳'
+            };
+        }
+
+        return { label: method, color: 'default', icon: 'Não informado' };
+    };
+
+    const config = getPaymentConfig();
+
+    return (
+        <Chip
+            icon={<span>{config.icon}</span>}
+            label={config.label}
+            color={config.color}
+            variant="outlined"
+            size="small"
+        />
+    );
+};
+
+// Componente para exibir informações de troco
+const CashChangeInfo = ({ payment }) => {
+    if (!payment?.requires_cash_change) return null;
+
+    return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+            <Typography variant="caption" color="warning.main">
+                💵 Troco para: R$ {payment.cash_change_for?.toFixed(2).replace('.', ',') || '0,00'}
+            </Typography>
+        </Box>
+    );
+};
 
 function Pedidos() {
     const navigate = useNavigate();
@@ -76,6 +142,7 @@ function Pedidos() {
     // Filter states
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [paymentFilter, setPaymentFilter] = useState('all'); // Novo filtro para pagamento
     const [sortBy, setSortBy] = useState('createdAt'); // Default sort by creation date
     const [sortOrder, setSortOrder] = useState('desc'); // Default descending (newest first)
 
@@ -85,50 +152,7 @@ function Pedidos() {
     // Track notified orders to avoid duplicate notifications
     const [notifiedOrders, setNotifiedOrders] = useState(new Set());
 
-    useEffect(() => {
-        let isMounted = true;
-        let pollingInterval;
-
-        // Check if user is logged in
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            if (isMounted) {
-                navigate('/');
-            }
-        } else {
-            // In a real app, you might want to decode the token to get user info
-            if (isMounted) {
-                setUser({ name: 'Usuário' });
-                // Adicionar um pequeno atraso para evitar corrida com outras chamadas
-                setTimeout(() => {
-                    if (isMounted) {
-                        fetchOrders(token);
-                    }
-                }, 150);
-
-                // Iniciar polling a cada 10 segundos se estiver habilitado
-                if (isPolling) {
-                    pollingInterval = setInterval(() => {
-                        if (isMounted) {
-                            const token = localStorage.getItem('authToken');
-                            if (token) {
-                                fetchOrders(token, true); // Pass true to indicate this is a polling call
-                            }
-                        }
-                    }, 10000); // 10 segundos
-                }
-            }
-        }
-
-        return () => {
-            isMounted = false;
-            if (pollingInterval) {
-                clearInterval(pollingInterval);
-            }
-        };
-    }, [navigate, isPolling]);
-
-    const fetchOrders = async (token, isPolling = false) => {
+    const fetchOrders = useCallback(async (token, isPolling = false) => {
         try {
             // Only set loading state for manual refresh, not for polling
             if (!isPolling) {
@@ -211,7 +235,9 @@ function Pedidos() {
                     status: order.order.status || 'CONFIRMED', // Default to 'CONFIRMED' if status is not provided
                     total: items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0),
                     createdAt: order.order.created_at || 'Horário não disponível', // Usar horário retornado pela API
-                    delivery_provider: order.order.delivery_provider
+                    delivery_provider: order.order.delivery_provider,
+                    // Manter as informações de pagamento
+                    payment: order.order.payment
                 };
             }).filter(order => order !== null); // Remover pedidos inválidos
 
@@ -286,7 +312,50 @@ function Pedidos() {
                 setLoading(false);
             }
         }
-    };
+    }, [navigate, isPolling]); // fetchOrders is wrapped in useCallback with proper dependencies
+
+    useEffect(() => {
+        let isMounted = true;
+        let pollingInterval;
+
+        // Check if user is logged in
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            if (isMounted) {
+                navigate('/');
+            }
+        } else {
+            // In a real app, you might want to decode the token to get user info
+            if (isMounted) {
+                setUser({ name: 'Usuário' });
+                // Adicionar um pequeno atraso para evitar corrida com outras chamadas
+                setTimeout(() => {
+                    if (isMounted) {
+                        fetchOrders(token);
+                    }
+                }, 150);
+
+                // Iniciar polling a cada 10 segundos se estiver habilitado
+                if (isPolling) {
+                    pollingInterval = setInterval(() => {
+                        if (isMounted) {
+                            const token = localStorage.getItem('authToken');
+                            if (token) {
+                                fetchOrders(token, true); // Pass true to indicate this is a polling call
+                            }
+                        }
+                    }, 10000); // 10 segundos
+                }
+            }
+        }
+
+        return () => {
+            isMounted = false;
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+        };
+    }, [navigate, isPolling, fetchOrders]); // fetchOrders is now properly defined before this useEffect
 
     const handlePageChange = (event, newPage) => {
         setPage(newPage);
@@ -355,6 +424,24 @@ function Pedidos() {
                 }
             }
 
+            // Apply payment filter
+            if (paymentFilter !== 'all' && order.payment) {
+                switch (paymentFilter) {
+                    case 'online':
+                        return !order.payment.in_person; // Online payments
+                    case 'in_person':
+                        return order.payment.in_person; // In-person payments
+                    case 'cash':
+                        return order.payment.method === 'CASH';
+                    case 'credit':
+                        return order.payment.method === 'CREDIT';
+                    case 'debit':
+                        return order.payment.method === 'DEBIT';
+                    default:
+                        return true;
+                }
+            }
+
             return true;
         })
         .sort((a, b) => {
@@ -412,47 +499,7 @@ function Pedidos() {
             return dateB - dateA;
         });
 
-    const updateOrderStatus = async (orderId, status) => {
-        try {
-            const token = localStorage.getItem('authToken');
-            await orderService.updateOrderStatus(orderId, status, token);
-            // Refresh orders after status update
-            fetchOrders(token);
 
-            // Mostrar notificação de sucesso
-            setSnackbar({
-                open: true,
-                message: 'Status do pedido atualizado com sucesso!',
-                severity: 'success'
-            });
-        } catch (error) {
-            console.error('Error updating order status:', error);
-
-            // Tratamento de erro mais amigável
-            let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
-            if (error.message) {
-                // Mapear mensagens de erro comuns para mensagens mais amigáveis
-                if (error.message.includes('Network Error')) {
-                    errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
-                } else if (error.message.includes('401')) {
-                    errorMessage = 'Sessão expirada. Faça login novamente.';
-                } else if (error.message.includes('403')) {
-                    errorMessage = 'Acesso negado. Você não tem permissão para realizar esta ação.';
-                } else if (error.message.includes('500')) {
-                    errorMessage = 'Erro no servidor. Tente novamente em alguns minutos.';
-                } else {
-                    errorMessage = error.message;
-                }
-            }
-
-            // Mostrar notificação de erro
-            setSnackbar({
-                open: true,
-                message: errorMessage,
-                severity: 'error'
-            });
-        }
-    };
 
     const confirmOrder = async (orderId) => {
         try {
@@ -692,7 +739,7 @@ function Pedidos() {
                         if (errorDetails.message) {
                             errorMessage = errorDetails.message;
                         }
-                    } catch (parseError) {
+                    } catch {
                         // Se não conseguir parsear, usar a mensagem original
                         errorMessage = 'Erro ao solicitar entregador iFood. Por favor, tente novamente.';
                     }
@@ -839,6 +886,8 @@ function Pedidos() {
                 return '#3f51b5'; // Índigo para Chegou ao Destino
             case 'Concluded':
                 return '#009688'; // Verde-azulado para Concluído
+            case 'DDCS':
+                return '#009688';
             case 'Cancelled':
             case 'CAR': // Cancelado
                 return '#f44336'; // Vermelho para Cancelado
@@ -878,8 +927,10 @@ function Pedidos() {
                 return 'Chegou ao Destino';
             case 'Concluded':
                 return 'Concluído';
+            case 'DDCS':
+                return 'Concluído';
             case 'Cancelled':
-            case 'CAR': // Cancelado
+            case 'CAR':
                 return 'Cancelado';
             case 'CANCELLATION_REQUESTED': // Cancelamento em andamento
                 return 'Cancelamento em andamento';
@@ -889,14 +940,14 @@ function Pedidos() {
     };
 
     const getAvailableActions = (order) => {
-        const { status, id: orderId, delivery_provider } = order;
-        
+        const { status, delivery_provider } = order;
+
         // Verificar se é um pedido com status de cancelamento
         if (status === 'CANCELLATION_REQUESTED' || status === 'Cancelled' || status === 'CAR') {
             // Não mostrar ações para pedidos em processo de cancelamento ou já cancelados
             return [];
         }
-        
+
         // Verificar se é um pedido TAKEOUT
         const isTakeout = delivery_provider === 'TAKEOUT';
 
@@ -1062,7 +1113,7 @@ function Pedidos() {
                             <>
                                 {/* Filter and search controls */}
                                 <Grid container spacing={2} sx={{ mb: 2 }}>
-                                    <Grid item xs={12} md={4}>
+                                    <Grid item xs={12} md={3}>
                                         <TextField
                                             fullWidth
                                             label="Buscar pedido"
@@ -1075,7 +1126,7 @@ function Pedidos() {
                                             }}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} md={4}>
+                                    <Grid item xs={12} md={3}>
                                         <FormControl fullWidth size="small">
                                             <InputLabel>Status</InputLabel>
                                             <Select
@@ -1104,7 +1155,24 @@ function Pedidos() {
                                             </Select>
                                         </FormControl>
                                     </Grid>
-                                    <Grid item xs={12} md={4}>
+                                    <Grid item xs={12} md={3}>
+                                        <FormControl fullWidth size="small">
+                                            <InputLabel>Filtrar por Pagamento</InputLabel>
+                                            <Select
+                                                value={paymentFilter}
+                                                label="Filtrar por Pagamento"
+                                                onChange={(e) => setPaymentFilter(e.target.value)}
+                                            >
+                                                <MenuItem value="all">Todos os Pagamentos</MenuItem>
+                                                <MenuItem value="online">Pagos Online</MenuItem>
+                                                <MenuItem value="in_person">Pagos na Entrega</MenuItem>
+                                                <MenuItem value="cash">Dinheiro</MenuItem>
+                                                <MenuItem value="credit">Cartão Crédito</MenuItem>
+                                                <MenuItem value="debit">Cartão Débito</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
                                         <FormControl fullWidth size="small">
                                             <InputLabel>Itens por página</InputLabel>
                                             <Select
@@ -1155,6 +1223,11 @@ function Pedidos() {
                                                 >
                                                     Horário {sortBy === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
                                                 </TableCell>
+                                                <TableCell
+                                                    sx={{ cursor: 'pointer', fontWeight: 'bold' }}
+                                                >
+                                                    Pagamento
+                                                </TableCell>
                                                 <TableCell>Ações</TableCell>
                                             </TableRow>
                                         </TableHead>
@@ -1193,6 +1266,9 @@ function Pedidos() {
                                                                 </TableCell>
                                                                 <TableCell>
                                                                     {order.createdAt || 'Horário não informado'}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <PaymentBadge payment={order.payment} />
                                                                 </TableCell>
                                                                 <TableCell>
                                                                     {actions.length > 0 ? (
@@ -1289,7 +1365,7 @@ function Pedidos() {
                                                     })
                                             ) : (
                                                 <TableRow>
-                                                    <TableCell colSpan={6} align="center">
+                                                    <TableCell colSpan={7} align="center">
                                                         Nenhum pedido encontrado
                                                     </TableCell>
                                                 </TableRow>
