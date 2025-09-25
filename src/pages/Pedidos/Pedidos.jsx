@@ -6,12 +6,6 @@ import {
     Toolbar,
     Button,
     Paper,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
     Chip,
     Drawer,
     CssBaseline,
@@ -40,14 +34,18 @@ import {
     List,
     ListItem,
     ListItemText,
-    LinearProgress
+    LinearProgress,
+    InputAdornment
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import {
     Menu as MenuIcon,
     Visibility as VisibilityIcon,
     Search as SearchIcon,
+    Settings as SettingsIcon,
+    VisibilityOff as VisibilityOffIcon,
     Check as CheckIcon,
+    Cancel as CancelIcon,
     PlayArrow as PlayArrowIcon,
     Stop as StopIcon,
     Send as SendIcon,
@@ -298,6 +296,7 @@ function Pedidos() {
     const [orderTypeFilter, setOrderTypeFilter] = useState('all'); // Filtro para tipo de pedido
     const [dateFilterStart, setDateFilterStart] = useState(''); // Data inicial para filtro
     const [dateFilterEnd, setDateFilterEnd] = useState(''); // Data final para filtro
+    const [showFilters, setShowFilters] = useState(false); // Control visibility of filters
     const [sortBy, setSortBy] = useState('createdAt'); // Default sort by creation date
     const [sortOrder, setSortOrder] = useState('desc'); // Default descending (newest first)
 
@@ -624,6 +623,8 @@ function Pedidos() {
                     return order.is_scheduled === true;
                 } else if (orderTypeFilter === 'immediate') {
                     return !order.is_scheduled || order.is_scheduled === false;
+                } else if (orderTypeFilter === 'takeout') {
+                    return order.delivery_provider === 'TAKEOUT';
                 }
             }
 
@@ -1325,10 +1326,7 @@ function Pedidos() {
                 )}
 
                 <Paper elevation={3} sx={{ p: 3, mt: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography variant="h6">
-                            Pedidos Recentes
-                        </Typography>
+                    {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         <Box>
                             <Button
                                 variant="contained"
@@ -1354,7 +1352,7 @@ function Pedidos() {
                                 {isPolling ? 'Parar Atualização' : 'Iniciar Atualização'}
                             </Button>
                         </Box>
-                    </Box>
+                    </Box> */}
 
                     {loading ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
@@ -1363,102 +1361,119 @@ function Pedidos() {
                     ) : (
                         <>
                             {/* Filter and search controls */}
-                            <Grid container spacing={2} sx={{ mb: 2 }}>
-                                <Grid item xs={12} md={3}>
-                                    <TextField
-                                        fullWidth
-                                        label="Buscar pedido"
-                                        variant="outlined"
-                                        size="small"
-                                        value={searchTerm}
-                                        onChange={handleSearchChange}
-                                        InputProps={{
-                                            endAdornment: <SearchIcon />
-                                        }}
-                                    />
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="h6">Filtros</Typography>
+                                <IconButton
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    color="primary"
+                                >
+                                    {showFilters ? <SettingsIcon /> : <SettingsIcon />}
+                                </IconButton>
+                            </Box>
+
+                            {showFilters && (
+                                <Grid container spacing={2} sx={{ mb: 2 }}>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
+                                            fullWidth
+                                            label="Buscar pedido"
+                                            variant="outlined"
+                                            size="small"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            InputProps={{
+                                                endAdornment: (
+                                                    <InputAdornment position="end">
+                                                        <SearchIcon />
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <FormControl fullWidth size="small">
+                                            <InputLabel>Status</InputLabel>
+                                            <Select
+                                                value={statusFilter}
+                                                label="Status"
+                                                onChange={handleStatusFilterChange}
+                                            >
+                                                <MenuItem value="all">Todos</MenuItem>
+                                                <MenuItem value="Placed">Recebido</MenuItem>
+                                                <MenuItem value="Confirmed">Confirmado</MenuItem>
+                                                <MenuItem value="SPS">Separação iniciada</MenuItem>
+                                                <MenuItem value="SPE">Separação finalizada</MenuItem>
+                                                <MenuItem value="READY_TO_PICKUP">Pronto para Retirada</MenuItem>
+                                                <MenuItem value="RFI">Pronto para Retirada (RFI)</MenuItem>
+                                                <MenuItem value="Dispatched">Despachado</MenuItem>
+                                                <MenuItem value="waitingWebhook">Aguardando iFood</MenuItem>
+                                                <MenuItem value="Arrived">Chegou ao Destino</MenuItem>
+                                                <MenuItem value="Concluded">Concluído</MenuItem>
+                                                <MenuItem value="CANCELLATION_REQUESTED">Cancelamento em andamento</MenuItem>
+                                                <MenuItem value="Cancelled">Cancelado</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <FormControl fullWidth size="small">
+                                            <InputLabel>Filtrar por Pagamento</InputLabel>
+                                            <Select
+                                                value={paymentFilter}
+                                                label="Filtrar por Pagamento"
+                                                onChange={(e) => setPaymentFilter(e.target.value)}
+                                            >
+                                                <MenuItem value="all">Todos os Pagamentos</MenuItem>
+                                                <MenuItem value="online">Pagos Online</MenuItem>
+                                                <MenuItem value="in_person">Pagos na Entrega</MenuItem>
+                                                <MenuItem value="cash">Dinheiro</MenuItem>
+                                                <MenuItem value="credit">Cartão Crédito</MenuItem>
+                                                <MenuItem value="debit">Cartão Débito</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <FormControl fullWidth size="small">
+                                            <InputLabel>Tipo de Pedido</InputLabel>
+                                            <Select
+                                                value={orderTypeFilter}
+                                                label="Tipo de Pedido"
+                                                onChange={(e) => setOrderTypeFilter(e.target.value)}
+                                            >
+                                                <MenuItem value="all">Todos os Pedidos</MenuItem>
+                                                <MenuItem value="scheduled">Pedidos Agendados</MenuItem>
+                                                <MenuItem value="immediate">Pedidos Imediatos</MenuItem>
+                                                <MenuItem value="takeout">Retirada em Loja</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
+                                            fullWidth
+                                            label="Data Início"
+                                            type="datetime-local"
+                                            value={dateFilterStart}
+                                            onChange={(e) => setDateFilterStart(e.target.value)}
+                                            size="small"
+                                            InputLabelProps={{
+                                                shrink: true,
+                                            }}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={3}>
+                                        <TextField
+                                            fullWidth
+                                            label="Data Fim"
+                                            type="datetime-local"
+                                            value={dateFilterEnd}
+                                            onChange={(e) => setDateFilterEnd(e.target.value)}
+                                            size="small"
+                                            InputLabelProps={{
+                                                shrink: true,
+                                            }}
+                                        />
+                                    </Grid>
                                 </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <FormControl fullWidth size="small">
-                                        <InputLabel>Status</InputLabel>
-                                        <Select
-                                            value={statusFilter}
-                                            label="Status"
-                                            onChange={handleStatusFilterChange}
-                                        >
-                                            <MenuItem value="all">Todos</MenuItem>
-                                            <MenuItem value="Placed">Recebido</MenuItem>
-                                            <MenuItem value="Confirmed">Confirmado</MenuItem>
-                                            <MenuItem value="SPS">Separação iniciada</MenuItem>
-                                            <MenuItem value="SPE">Separação finalizada</MenuItem>
-                                            <MenuItem value="READY_TO_PICKUP">Pronto para Retirada</MenuItem>
-                                            <MenuItem value="RFI">Pronto para Retirada (RFI)</MenuItem>
-                                            <MenuItem value="Dispatched">Despachado</MenuItem>
-                                            <MenuItem value="waitingWebhook">Aguardando iFood</MenuItem>
-                                            <MenuItem value="Arrived">Chegou ao Destino</MenuItem>
-                                            <MenuItem value="Concluded">Concluído</MenuItem>
-                                            <MenuItem value="CANCELLATION_REQUESTED">Cancelamento em andamento</MenuItem>
-                                            <MenuItem value="Cancelled">Cancelado</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <FormControl fullWidth size="small">
-                                        <InputLabel>Filtrar por Pagamento</InputLabel>
-                                        <Select
-                                            value={paymentFilter}
-                                            label="Filtrar por Pagamento"
-                                            onChange={(e) => setPaymentFilter(e.target.value)}
-                                        >
-                                            <MenuItem value="all">Todos os Pagamentos</MenuItem>
-                                            <MenuItem value="online">Pagos Online</MenuItem>
-                                            <MenuItem value="in_person">Pagos na Entrega</MenuItem>
-                                            <MenuItem value="cash">Dinheiro</MenuItem>
-                                            <MenuItem value="credit">Cartão Crédito</MenuItem>
-                                            <MenuItem value="debit">Cartão Débito</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <FormControl fullWidth size="small">
-                                        <InputLabel>Tipo de Pedido</InputLabel>
-                                        <Select
-                                            value={orderTypeFilter}
-                                            label="Tipo de Pedido"
-                                            onChange={(e) => setOrderTypeFilter(e.target.value)}
-                                        >
-                                            <MenuItem value="all">Todos os Pedidos</MenuItem>
-                                            <MenuItem value="scheduled">Pedidos Agendados</MenuItem>
-                                            <MenuItem value="immediate">Pedidos Imediatos</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <TextField
-                                        fullWidth
-                                        label="Data Início"
-                                        type="datetime-local"
-                                        value={dateFilterStart}
-                                        onChange={(e) => setDateFilterStart(e.target.value)}
-                                        size="small"
-                                        InputLabelProps={{
-                                            shrink: true,
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <TextField
-                                        fullWidth
-                                        label="Data Fim"
-                                        type="datetime-local"
-                                        value={dateFilterEnd}
-                                        onChange={(e) => setDateFilterEnd(e.target.value)}
-                                        size="small"
-                                        InputLabelProps={{
-                                            shrink: true,
-                                        }}
-                                    />
-                                </Grid>
-                            </Grid>
+                            )}
 
                             <Box>
                                 {orderedOrders.length > 0 ? (
