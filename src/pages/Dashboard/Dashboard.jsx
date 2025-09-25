@@ -161,21 +161,21 @@ function Dashboard() {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'Placed': return '#FF9800'; // Laranja
-            case 'Confirmed': return '#4CAF50'; // Verde
+            case 'Placed': return 'warning.main'; // Laranja
+            case 'Confirmed': return 'success.main'; // Verde
             case 'SPS':
-            case 'Separation Started': return '#FFEB3B'; // Amarelo
+            case 'Separation Started': return 'warning.light'; // Amarelo claro
             case 'SPE':
-            case 'Separation Ended': return '#FFC107'; // Âmbar
+            case 'Separation Ended': return 'warning.main'; // Amarelo
             case 'READY_TO_PICKUP':
             case 'Ready to Pickup':
-            case 'RFI': return '#FF5722'; // Laranja escuro
-            case 'Dispatched': return '#9C27B0'; // Roxo
+            case 'RFI': return 'info.main'; // Azul claro
+            case 'Dispatched': return 'primary.main'; // Azul
             case 'Arrived':
-            case 'Arrived at Destination': return '#3F51B5'; // Índigo
-            case 'Concluded': return '#009688'; // Verde-azulado
-            case 'Cancelled': return '#F44336'; // Vermelho
-            default: return '#9E9E9E'; // Cinza
+            case 'Arrived at Destination': return 'primary.light'; // Azul claro
+            case 'Concluded': return 'success.main'; // Verde
+            case 'Cancelled': return 'error.main'; // Vermelho
+            default: return 'grey.500'; // Cinza
         }
     };
 
@@ -361,7 +361,7 @@ function Dashboard() {
                                                     Visão geral do seu negócio
                                                 </Typography>
                                             </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                 <Box sx={{ textAlign: 'right' }}>
                                                     <Typography variant="body2" color="textSecondary">Status da Loja</Typography>
                                                     <Stack direction="row" alignItems="center" justifyContent="flex-end">
@@ -370,24 +370,24 @@ function Dashboard() {
                                                                 width: 12,
                                                                 height: 12,
                                                                 borderRadius: '50%',
-                                                                bgcolor: '#4caf50',
+                                                                bgcolor: 'success.main', // Using green for open status
                                                                 mr: 1,
-                                                                boxShadow: '0 0 4px 2px #4caf50'
+                                                                boxShadow: '0 0 4px 2px rgba(76, 175, 80, 0.5)'
                                                             }}
                                                         />
-                                                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>Aberto</Typography>
+                                                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>Aberto</Typography>
                                                     </Stack>
                                                 </Box>
-                                                <AccessTimeIcon sx={{ fontSize: 40, color: '#4caf50' }} />
+                                                <AccessTimeIcon sx={{ fontSize: 32, color: 'success.main' }} />
                                             </Box>
                                         </Box>
 
                                         {/* KPI Cards Section */}
-                                        <Grid container spacing={3} sx={{ mb: 4 }}>
+                                        <Grid container spacing={2} sx={{ mb: 3 }}>
                                             <Grid item xs={12} md={4}>
                                                 <Card sx={{
                                                     height: '100%',
-                                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                    backgroundColor: 'primary.main',
                                                     color: 'white',
                                                     borderRadius: 3,
                                                     boxShadow: 3,
@@ -401,7 +401,7 @@ function Dashboard() {
                                                             mx: 'auto',
                                                             mb: 1
                                                         }}>
-                                                            <EuroIcon sx={{ color: 'white', fontSize: 32 }} />
+                                                            R$
                                                         </Avatar>
                                                         <Typography variant="h6" color="rgba(255,255,255,0.8)" gutterBottom sx={{ fontWeight: 500 }}>
                                                             Total de Vendas
@@ -415,7 +415,7 @@ function Dashboard() {
                                             <Grid item xs={12} md={4}>
                                                 <Card sx={{
                                                     height: '100%',
-                                                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                                                    backgroundColor: 'secondary.main',
                                                     color: 'white',
                                                     borderRadius: 3,
                                                     boxShadow: 3,
@@ -443,7 +443,7 @@ function Dashboard() {
                                             <Grid item xs={12} md={4}>
                                                 <Card sx={{
                                                     height: '100%',
-                                                    background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                                                    backgroundColor: 'success.main',
                                                     color: 'white',
                                                     borderRadius: 3,
                                                     boxShadow: 3,
