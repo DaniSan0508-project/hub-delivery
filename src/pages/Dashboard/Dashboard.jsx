@@ -260,51 +260,67 @@ function Dashboard() {
                             
 
                             <Box sx={{ position: 'relative', mb: 4 }}>
-
-                                <Box sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    right: 0,
-                                    width: 320,
-                                    zIndex: 10
-                                }}>
-                                    <Paper elevation={4}>
-                                        <Accordion>
-                                            <AccordionSummary
-                                                expandIcon={<ExpandMoreIcon />}
-                                                aria-controls="opening-hours-content"
-                                                id="opening-hours-header"
-                                            >
-                                                <Typography>
-                                                    Horários de Funcionamento
-                                                </Typography>
-                                            </AccordionSummary>
-                                            <AccordionDetails>
-                                                {openingHours.length > 0 ? (
-                                                    <Table size="small">
-                                                        <TableBody>
-                                                            {openingHours.map((shift, index) => (
-                                                                <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                                                                    <TableCell component="th" scope="row">
-                                                                        {daysOfWeekMap[shift.dayOfWeek]}
-                                                                    </TableCell>
-                                                                    <TableCell align="right">
-                                                                        {`${shift.start.substring(0, 5)} - ${shift.end.substring(0, 5)}`}
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            ))}
-                                                        </TableBody>
-                                                    </Table>
-                                                ) : (
-                                                    <Alert severity="info" sx={{ mt: 1 }}>
-                                                        Nenhum horário configurado.
-                                                    </Alert>
-                                                )}
-                                            </AccordionDetails>
-                                        </Accordion>
-                                    </Paper>
-                                </Box>
+                                <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
+                                    Resumo de Vendas
+                                </Typography>
                             </Box>
+
+                            {/* Horários de Funcionamento Card */}
+                            <Grid container spacing={2} sx={{ mb: 4, width: '100%', margin: 0 }}>
+                                <Grid item xs={12} sx={{ padding: 1 }}>
+                                    <Card sx={{
+                                        height: '100%',
+                                        boxShadow: 4,
+                                        transition: 'transform 0.2s, box-shadow 0.2s',
+                                        '&:hover': {
+                                            transform: 'translateY(-4px)',
+                                            boxShadow: 6
+                                        },
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        borderRadius: 2
+                                    }}>
+                                        <CardContent sx={{
+                                            flexGrow: 1,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'center',
+                                            textAlign: 'center',
+                                            padding: 3
+                                        }}>
+                                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                                                Horários de Funcionamento
+                                            </Typography>
+                                            {openingHours.length > 0 ? (
+                                                <Table size="small" sx={{ mt: 1 }}>
+                                                    <TableBody>
+                                                        {openingHours.map((shift, index) => (
+                                                            <TableRow 
+                                                                key={index} 
+                                                                sx={{ 
+                                                                    '&:last-child td, &:last-child th': { border: 0 },
+                                                                    '&:nth-of-type(odd)': { backgroundColor: 'action.hover' }
+                                                                }}
+                                                            >
+                                                                <TableCell component="th" scope="row" align="left">
+                                                                    {daysOfWeekMap[shift.dayOfWeek]}
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    {`${shift.start.substring(0, 5)} - ${shift.end.substring(0, 5)}`}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            ) : (
+                                                <Alert severity="info" sx={{ mt: 2 }}>
+                                                    Nenhum horário configurado.
+                                                </Alert>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                            </Grid>
 
                             {/* ===== MUDANÇA APLICADA AQUI ===== */}
                             <Grid container spacing={2} sx={{ mb: 4, width: '100%', margin: 0 }}>
