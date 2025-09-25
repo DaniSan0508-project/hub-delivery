@@ -394,217 +394,228 @@ function Loja() {
                 )}
 
                 <Grid container spacing={3}>
-                    <Grid item xs={12}>
-                        <Paper elevation={3} sx={{ p: 3 }}>
-                            <Typography variant="h6" gutterBottom>
-                                Manutenção da Loja
-                            </Typography>
-                            <Divider sx={{ mb: 2 }} />
-
-                            {/* Status da Loja */}
-                            <Card variant="outlined" sx={{ mb: 3 }}>
-                                <CardContent>
-                                    <Typography variant="subtitle1" gutterBottom>
-                                        Status da Integração
-                                    </Typography>
-                                    {statusLoading ? (
-                                        <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                                            <CircularProgress />
-                                        </Box>
-                                    ) : merchantStatus ? (
-                                        <Box>
-                                            {merchantStatus.data && merchantStatus.data.state === 'OK' ? (
-                                                <Alert severity="success">
-                                                    <Typography variant="h6">Loja funcionando normalmente</Typography>
-                                                    <Typography>
-                                                        A integração com o iFood está operando corretamente.
-                                                    </Typography>
-                                                </Alert>
-                                            ) : (
-                                                <Alert severity="warning">
-                                                    <Typography variant="h6">Loja fechada</Typography>
-                                                    {merchantStatus.data && merchantStatus.data.problems && merchantStatus.data.problems.length > 0 ? (
-                                                        merchantStatus.data.problems.map((problem, index) => (
-                                                            <Typography key={index}>
-                                                                {problem.description || problem}
-                                                            </Typography>
-                                                        ))
-                                                    ) : (
-                                                        <Typography>
-                                                            A loja está temporariamente fechada. Verifique os horários de funcionamento.
-                                                        </Typography>
-                                                    )}
-                                                    <Button
-                                                        variant="contained"
-                                                        color="primary"
-                                                        sx={{ mt: 1 }}
-                                                        href="https://portal.ifood.com.br"
-                                                        target="_blank"
-                                                    >
-                                                        Verificar no Sysfar HubDelivery
-                                                    </Button>
-                                                </Alert>
-                                            )}
-                                            <Box sx={{ mt: 2 }}>
-                                                <Typography variant="body2" color="textSecondary">
-                                                    Última verificação: {new Date().toLocaleString()}
+                    {/* Status da Integração Card */}
+                    <Grid item xs={12} md={6}>
+                        <Card variant="outlined">
+                            <CardContent>
+                                <Typography variant="h6" gutterBottom>
+                                    Status da Integração
+                                </Typography>
+                                {statusLoading ? (
+                                    <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                                        <CircularProgress />
+                                    </Box>
+                                ) : merchantStatus ? (
+                                    <Box>
+                                        {merchantStatus.data && merchantStatus.data.state === 'OK' ? (
+                                            <Alert severity="success">
+                                                <Typography variant="h6">Loja funcionando normalmente</Typography>
+                                                <Typography>
+                                                    A integração com o iFood está operando corretamente.
                                                 </Typography>
+                                            </Alert>
+                                        ) : (
+                                            <Alert severity="warning">
+                                                <Typography variant="h6">Loja fechada</Typography>
+                                                {merchantStatus.data && merchantStatus.data.problems && merchantStatus.data.problems.length > 0 ? (
+                                                    merchantStatus.data.problems.map((problem, index) => (
+                                                        <Typography key={index}>
+                                                            {problem.description || problem}
+                                                        </Typography>
+                                                    ))
+                                                ) : (
+                                                    <Typography>
+                                                        A loja está temporariamente fechada. Verifique os horários de funcionamento.
+                                                    </Typography>
+                                                )}
                                                 <Button
-                                                    variant="outlined"
+                                                    variant="contained"
+                                                    color="primary"
                                                     sx={{ mt: 1 }}
-                                                    onClick={() => fetchMerchantStatus(localStorage.getItem('authToken'))}
+                                                    href="https://portal.ifood.com.br"
+                                                    target="_blank"
                                                 >
-                                                    Atualizar Status
+                                                    Verificar no Sysfar HubDelivery
                                                 </Button>
-                                            </Box>
-                                        </Box>
-                                    ) : (
-                                        <Typography>Carregando status da loja...</Typography>
-                                    )}
-                                </CardContent>
-                            </Card>
-
-
-                            {/* Horários de Funcionamento */}
-                            <Card variant="outlined" sx={{ mb: 3 }}>
-                                <CardContent>
-                                    <Typography variant="subtitle1" gutterBottom>
-                                        Horários de Funcionamento
-                                    </Typography>
-                                    {openingHoursLoading ? (
-                                        <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                                            <CircularProgress />
-                                        </Box>
-                                    ) : (
-                                        <Grid container spacing={2} alignItems="center">
-                                            {openingHoursData.map((day, index) => {
-                                                return (
-                                                    <Grid item xs={12} key={day.value}>
-                                                        <Grid container spacing={2} alignItems="center">
-                                                            <Grid item xs={12} sm={4}>
-                                                                <FormControlLabel
-                                                                    control={
-                                                                        <Checkbox
-                                                                            checked={day.checked}
-                                                                            onChange={(e) => handleOpeningHoursFormChange(index, 'checked', e.target.checked)}
-                                                                        />
-                                                                    }
-                                                                    label={day.label}
-                                                                />
-                                                            </Grid>
-                                                            <Grid item xs={6} sm={4}>
-                                                                <TextField
-                                                                    fullWidth
-                                                                    label="Início"
-                                                                    type="time"
-                                                                    value={day.start}
-                                                                    onChange={(e) => handleOpeningHoursFormChange(index, 'start', e.target.value)}
-                                                                    disabled={!day.checked}
-                                                                    InputLabelProps={{ shrink: true }}
-                                                                    size="small"
-                                                                />
-                                                            </Grid>
-                                                            <Grid item xs={6} sm={4}>
-                                                                <TextField
-                                                                    fullWidth
-                                                                    label="Fim"
-                                                                    type="time"
-                                                                    value={day.end}
-                                                                    onChange={(e) => handleOpeningHoursFormChange(index, 'end', e.target.value)}
-                                                                    disabled={!day.checked}
-                                                                    InputLabelProps={{ shrink: true }}
-                                                                    size="small"
-                                                                />
-                                                            </Grid>
-                                                        </Grid>
-                                                    </Grid>
-                                                );
-                                            })}
-                                        </Grid>
-                                    )}
-                                    <Box sx={{ mt: 2, textAlign: 'right' }}>
-                                        <Button
-                                            variant="contained"
-                                            color="primary"
-                                            onClick={handleUpdateOpeningHours}
-                                            disabled={openingHoursLoading}
-                                        >
-                                            {openingHoursLoading ? <CircularProgress size={24} /> : 'Salvar Horários'}
-                                        </Button>
-                                    </Box>
-                                    {openingHoursMessage && (
-                                        <Alert severity={openingHoursMessage.severity} sx={{ mt: 2 }}>
-                                            {openingHoursMessage.message}
-                                        </Alert>
-                                    )}
-                                </CardContent>
-                            </Card>
-
-                            {/* Criar Interrupção */}
-                            <Card variant="outlined" sx={{ mb: 3 }}>
-                                <CardContent>
-                                    <Typography variant="subtitle1" gutterBottom>
-                                        Criar Interrupção de Loja
-                                    </Typography>
-                                    <Grid container spacing={2}>
-                                        <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                label="Descrição da Interrupção"
-                                                name="description"
-                                                value={interruptionData.description}
-                                                onChange={handleInterruptionFormChange}
+                                            </Alert>
+                                        )}
+                                        <Box sx={{ mt: 2 }}>
+                                            <Typography variant="body2" color="textSecondary">
+                                                Última verificação: {new Date().toLocaleString()}
+                                            </Typography>
+                                            <Button
                                                 variant="outlined"
-                                                size="small"
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Início"
-                                                type="datetime-local"
-                                                name="start"
-                                                value={interruptionData.start}
-                                                onChange={handleInterruptionFormChange}
-                                                InputLabelProps={{
-                                                    shrink: true,
-                                                }}
-                                                size="small"
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Fim"
-                                                type="datetime-local"
-                                                name="end"
-                                                value={interruptionData.end}
-                                                onChange={handleInterruptionFormChange}
-                                                InputLabelProps={{
-                                                    shrink: true,
-                                                }}
-                                                size="small"
-                                            />
-                                        </Grid>
-                                    </Grid>
-                                    <Box sx={{ mt: 2, textAlign: 'right' }}>
-                                        <Button
-                                            variant="contained"
-                                            color="primary"
-                                            onClick={handleCreateInterruption}
-                                            disabled={interruptionLoading}
-                                        >
-                                            {interruptionLoading ? <CircularProgress size={24} /> : 'Agendar Interrupção'}
-                                        </Button>
+                                                sx={{ mt: 1 }}
+                                                onClick={() => fetchMerchantStatus(localStorage.getItem('authToken'))}
+                                            >
+                                                Atualizar Status
+                                            </Button>
+                                        </Box>
                                     </Box>
-                                    {interruptionMessage && (
-                                        <Alert severity={interruptionMessage.severity} sx={{ mt: 2 }}>
-                                            {interruptionMessage.message}
-                                        </Alert>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </Paper>
+                                ) : (
+                                    <Typography>Carregando status da loja...</Typography>
+                                )}
+                            </CardContent>
+                            <CardActions sx={{ justifyContent: 'flex-end' }}>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={() => fetchMerchantStatus(localStorage.getItem('authToken'))}
+                                    disabled={statusLoading}
+                                >
+                                    {statusLoading ? <CircularProgress size={24} /> : 'Atualizar Status'}
+                                </Button>
+                            </CardActions>
+                        </Card>
+                    </Grid>
+
+                    {/* Horários de Funcionamento Card */}
+                    <Grid item xs={12} md={6}>
+                        <Card variant="outlined">
+                            <CardContent sx={{ height: '100%' }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Horários de Funcionamento
+                                </Typography>
+                                {openingHoursLoading ? (
+                                    <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                                        <CircularProgress />
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ maxHeight: 170, overflow: 'auto' }}>
+                                        {openingHoursData.map((day, index) => (
+                                            <Box
+                                                key={day.value}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                    padding: 1,
+                                                    backgroundColor: day.checked ? '#f0f8ff' : '#f9f9f9',
+                                                    borderRadius: 1,
+                                                    mb: 1
+                                                }}
+                                            >
+                                                <FormControlLabel
+                                                    control={
+                                                        <Checkbox
+                                                            checked={day.checked}
+                                                            onChange={(e) => handleOpeningHoursFormChange(index, 'checked', e.target.checked)}
+                                                            size="small"
+                                                        />
+                                                    }
+                                                    label={day.label}
+                                                    sx={{ margin: 0, flex: 2 }}
+                                                />
+                                                <Box sx={{ display: 'flex', gap: 1, flex: 3 }}>
+                                                    <TextField
+                                                        label="Início"
+                                                        type="time"
+                                                        value={day.start}
+                                                        onChange={(e) => handleOpeningHoursFormChange(index, 'start', e.target.value)}
+                                                        disabled={!day.checked}
+                                                        InputLabelProps={{ shrink: true }}
+                                                        size="small"
+                                                        sx={{ minWidth: 100 }}
+                                                    />
+                                                    <TextField
+                                                        label="Fim"
+                                                        type="time"
+                                                        value={day.end}
+                                                        onChange={(e) => handleOpeningHoursFormChange(index, 'end', e.target.value)}
+                                                        disabled={!day.checked}
+                                                        InputLabelProps={{ shrink: true }}
+                                                        size="small"
+                                                        sx={{ minWidth: 100 }}
+                                                    />
+                                                </Box>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                )}
+                                {openingHoursMessage && (
+                                    <Alert severity={openingHoursMessage.severity} sx={{ mt: 2 }}>
+                                        {openingHoursMessage.message}
+                                    </Alert>
+                                )}
+                            </CardContent>
+                            <CardActions sx={{ justifyContent: 'flex-end' }}>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={handleUpdateOpeningHours}
+                                    disabled={openingHoursLoading}
+                                >
+                                    {openingHoursLoading ? <CircularProgress size={24} /> : 'Salvar Horários'}
+                                </Button>
+                            </CardActions>
+                        </Card>
+                    </Grid>
+
+                    {/* Criar Interrupção Card - Below the other two */}
+                    <Grid item xs={12}>
+                        <Card variant="outlined">
+                            <CardContent>
+                                <Typography variant="h6" gutterBottom>
+                                    Criar Interrupção de Loja
+                                </Typography>
+                                <Grid container spacing={2}>
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField
+                                            fullWidth
+                                            label="Descrição da Interrupção"
+                                            name="description"
+                                            value={interruptionData.description}
+                                            onChange={handleInterruptionFormChange}
+                                            variant="outlined"
+                                            size="small"
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} sm={3}>
+                                        <TextField
+                                            fullWidth
+                                            label="Início"
+                                            type="datetime-local"
+                                            name="start"
+                                            value={interruptionData.start}
+                                            onChange={handleInterruptionFormChange}
+                                            InputLabelProps={{
+                                                shrink: true,
+                                            }}
+                                            size="small"
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} sm={3}>
+                                        <TextField
+                                            fullWidth
+                                            label="Fim"
+                                            type="datetime-local"
+                                            name="end"
+                                            value={interruptionData.end}
+                                            onChange={handleInterruptionFormChange}
+                                            InputLabelProps={{
+                                                shrink: true,
+                                            }}
+                                            size="small"
+                                        />
+                                    </Grid>
+                                </Grid>
+                                {interruptionMessage && (
+                                    <Alert severity={interruptionMessage.severity} sx={{ mt: 2 }}>
+                                        {interruptionMessage.message}
+                                    </Alert>
+                                )}
+                            </CardContent>
+                            <CardActions sx={{ justifyContent: 'flex-end' }}>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={handleCreateInterruption}
+                                    disabled={interruptionLoading}
+                                >
+                                    {interruptionLoading ? <CircularProgress size={24} /> : 'Agendar Interrupção'}
+                                </Button>
+                            </CardActions>
+                        </Card>
                     </Grid>
                 </Grid>
             </Box>
