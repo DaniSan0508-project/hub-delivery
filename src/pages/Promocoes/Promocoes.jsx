@@ -83,10 +83,10 @@ function Promocoes() {
     });
 
     // Calcular paginação no frontend
-    const paginatedPromotions = promotionsData ? 
+    const paginatedPromotions = promotionsData ?
         promotionsData.slice((page - 1) * rowsPerPage, page * rowsPerPage) : [];
 
-    const totalPages = promotionsData ? 
+    const totalPages = promotionsData ?
         Math.ceil(promotionsData.length / rowsPerPage) : 0;
 
     const fetchPromotionDetails = async (aggregationId) => {
@@ -195,51 +195,50 @@ function Promocoes() {
             </Box>
             <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - 240px)` } }}>
                 <Toolbar />
-                <Container maxWidth="lg">
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                        <Typography variant="h4" gutterBottom>
-                            Promoções
-                        </Typography>
-                        <Button
-                            variant="contained"
-                            startIcon={<AddIcon />}
-                            onClick={() => setOpenCreateDialog(true)}
-                        >
-                            Nova Promoção
-                        </Button>
-                    </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Typography variant="h6" color="grey">
+                        Promoções
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => setOpenCreateDialog(true)}
+                    >
+                        Nova Promoção
+                    </Button>
+                </Box>
 
-                    {error && (
-                        <Alert severity="error" sx={{ mb: 2 }}>
-                            {error.message || 'Erro ao carregar promoções'}
-                        </Alert>
-                    )}
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error.message || 'Erro ao carregar promoções'}
+                    </Alert>
+                )}
 
-                    <Paper elevation={3} sx={{ p: 3 }}>
-                        <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 2 }}>
-                            <Tab label="Todas as Promoções" />
-                        </Tabs>
+                <Paper elevation={3} sx={{ p: 3 }}>
+                    <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 2 }}>
+                        <Tab label="Todas as Promoções" />
+                    </Tabs>
 
-                        {isLoading ? (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-                                <CircularProgress />
-                            </Box>
-                        ) : (
-                            <>
-                                {promotionsData && promotionsData.length > 0 ? (
-                                    <>
-                                        <TableContainer>
-                                            <Table>
-                                                <TableHead>
-                                                    <TableRow>
-                                                        <TableCell>Tag de Agregação</TableCell>
-                                                        <TableCell>Data de Criação</TableCell>
-                                                        <TableCell>Ações</TableCell>
-                                                    </TableRow>
-                                                </TableHead>
-                                                <TableBody>
-                                                    {paginatedPromotions.map((promotion) => (
-                                                        <TableRow key={promotion.id}>
+                    {isLoading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : (
+                        <>
+                            {promotionsData && promotionsData.length > 0 ? (
+                                <>
+                                    <TableContainer>
+                                        <Table>
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>Tag de Agregação</TableCell>
+                                                    <TableCell>Data de Criação</TableCell>
+                                                    <TableCell>Ações</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {paginatedPromotions.map((promotion) => (
+                                                    <TableRow key={promotion.id}>
                                                         <TableCell>{promotion.aggregation_tag}</TableCell>
                                                         <TableCell>{formatDate(promotion.created_at)}</TableCell>
                                                         <TableCell>
@@ -321,7 +320,7 @@ function Promocoes() {
                                                 {item.progressiveDiscount && (
                                                     <Grid item xs={12}>
                                                         <Typography variant="body2">
-                                                            Desconto Progressivo: Leve {item.progressiveDiscount.quantityToBuy}, 
+                                                            Desconto Progressivo: Leve {item.progressiveDiscount.quantityToBuy},
                                                             Pague {item.progressiveDiscount.quantityToPay}
                                                         </Typography>
                                                     </Grid>
@@ -352,10 +351,9 @@ function Promocoes() {
                         queryClient.invalidateQueries(['promotions']);
                     }}
                 />
-            </Container>
+            </Box>
         </Box>
-    </Box>
-);
+    );
 }
 
 // Componente separado para o formulário de criação de promoção
@@ -370,27 +368,27 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
         quantityToBuy: '',
         quantityToPay: ''
     });
-    
+
     const [products, setProducts] = useState([
         { ean: '', id: Date.now() }
     ]);
-    
+
     const handleAddProduct = () => {
         setProducts(prev => [
             ...prev,
             { ean: '', id: Date.now() }
         ]);
     };
-    
+
     const handleRemoveProduct = (id) => {
         if (products.length > 1) {
             setProducts(prev => prev.filter(product => product.id !== id));
         }
     };
-    
+
     const handleProductChange = (id, ean) => {
-        setProducts(prev => 
-            prev.map(product => 
+        setProducts(prev =>
+            prev.map(product =>
                 product.id === id ? { ...product, ean } : product
             )
         );
@@ -429,38 +427,38 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
             setLoading(false);
             return;
         }
-        
+
         if (products.length === 0 || products.every(product => !product.ean)) {
             setError('Pelo menos um EAN de produto é obrigatório');
             setLoading(false);
             return;
         }
-        
+
         // Verificar se todos os produtos têm EAN preenchido
         if (products.some(product => !product.ean)) {
             setError('Todos os produtos devem ter o EAN preenchido');
             setLoading(false);
             return;
         }
-        
+
         if (!formData.initialDate || !formData.finalDate) {
             setError('Datas inicial e final são obrigatórias');
             setLoading(false);
             return;
         }
-        
+
         if (formData.promotionType === 'PERCENTAGE' && !formData.discountValue) {
             setError('Valor do desconto é obrigatório para promoções PERCENTAGE');
             setLoading(false);
             return;
         }
-        
+
         if (formData.promotionType === 'LXPY' && (!formData.quantityToBuy || !formData.quantityToPay)) {
             setError('Quantidade a comprar e a pagar são obrigatórias para promoções LXPY');
             setLoading(false);
             return;
         }
-        
+
         if (formData.promotionType === 'PERCENTAGE_PER_X_UNITS' && (!formData.discountValue || !formData.quantityToBuy)) {
             setError('Valor do desconto e quantidade a comprar são obrigatórias para promoções PERCENTAGE_PER_X_UNITS');
             setLoading(false);
@@ -469,7 +467,7 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
 
         try {
             const token = localStorage.getItem('authToken');
-            
+
             // Montar os itens para cada produto
             const items = products.map(product => {
                 const item = {
@@ -601,8 +599,8 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
                                                                     <Grid item>
                                                                         {products.length > 1 && (
                                                                             <Tooltip title="Remover produto">
-                                                                                <IconButton 
-                                                                                    color="error" 
+                                                                                <IconButton
+                                                                                    color="error"
                                                                                     onClick={() => handleRemoveProduct(product.id)}
                                                                                     size="small"
                                                                                 >
@@ -660,7 +658,7 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
                                 </CardContent>
                             </Card>
                         </Grid>
-                        
+
                         <Grid item xs={12}>
                             <Card variant="outlined">
                                 <CardContent>
@@ -692,7 +690,7 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
                                 </CardContent>
                             </Card>
                         </Grid>
-                        
+
                         {/* Campos condicionais baseados no tipo de promoção */}
                         {formData.promotionType === 'PERCENTAGE' && (
                             <Grid item xs={12}>
@@ -726,7 +724,7 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
                                 </Card>
                             </Grid>
                         )}
-                        
+
                         {formData.promotionType === 'LXPY' && (
                             <Grid item xs={12}>
                                 <Card variant="outlined" sx={{ borderColor: 'secondary.main' }}>
@@ -773,7 +771,7 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
                                 </Card>
                             </Grid>
                         )}
-                        
+
                         {formData.promotionType === 'PERCENTAGE_PER_X_UNITS' && (
                             <Grid item xs={12}>
                                 <Card variant="outlined" sx={{ borderColor: 'success.main' }}>

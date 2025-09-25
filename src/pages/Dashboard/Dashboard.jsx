@@ -354,11 +354,8 @@ function Dashboard() {
 
 
                                             <Box>
-                                                <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
+                                                <Typography variant="h6" color="grey">
                                                     Painel de Controle
-                                                </Typography>
-                                                <Typography variant="h6" color="textSecondary">
-                                                    Visão geral do seu negócio
                                                 </Typography>
                                             </Box>
                                         </Box>

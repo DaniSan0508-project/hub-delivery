@@ -54,7 +54,7 @@ function Sincronizacao() {
 
     useEffect(() => {
         let isMounted = true;
-        
+
         // Check if user is logged in
         const token = localStorage.getItem('authToken');
         if (!token) {
@@ -73,7 +73,7 @@ function Sincronizacao() {
                 }, 250);
             }
         }
-        
+
         return () => {
             isMounted = false;
         };
@@ -83,9 +83,6 @@ function Sincronizacao() {
         try {
             setLoading(true);
             setError(null);
-
-            const syncData = await productService.getSyncStatus(token);
-            setSyncData(syncData);
         } catch (error) {
             console.error('Error fetching sync data:', error);
             // Verificar se é um erro de token expirado
@@ -240,176 +237,174 @@ function Sincronizacao() {
             </Box>
             <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}>
                 <Toolbar />
-                <Container maxWidth="lg">
-                    <Typography variant="h4" gutterBottom>
-                        Sincronização
-                    </Typography>
+                <Typography variant="h6" color="grey">
+                    Sincronização
+                </Typography>
 
-                    {error && (
-                        <Alert severity="error" sx={{ mb: 2 }}>
-                            {error}
-                        </Alert>
-                    )}
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
+                )}
 
-                    {successMessage && (
-                        <Alert severity="success" sx={{ mb: 2 }}>
-                            {successMessage}
-                        </Alert>
-                    )}
+                {successMessage && (
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                        {successMessage}
+                    </Alert>
+                )}
 
-                    <Grid container spacing={3}>
-                        {/* Product Sync Section */}
-                        <Grid item xs={12} md={6}>
-                            <Paper elevation={3} sx={{ p: 3 }}>
-                                <Typography variant="h6" gutterBottom>
-                                    Sincronizar Produtos
-                                </Typography>
+                <Grid container spacing={3}>
+                    {/* Product Sync Section */}
+                    <Grid item xs={12} md={6}>
+                        <Paper elevation={3} sx={{ p: 3 }}>
+                            <Typography variant="h6" gutterBottom>
+                                Sincronizar Produtos
+                            </Typography>
 
-                                <Box sx={{ mb: 3 }}>
-                                    <Typography variant="subtitle1" gutterBottom>
-                                        Adicionar Produto
-                                    </Typography>
-                                    <Grid container spacing={2}>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Código de Barras"
-                                                name="barcode"
-                                                value={newProduct.barcode}
-                                                onChange={handleProductInputChange}
-                                                size="small"
-                                                required
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Nome do Produto"
-                                                name="name"
-                                                value={newProduct.name}
-                                                onChange={handleProductInputChange}
-                                                size="small"
-                                                required
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Preço (R$)"
-                                                name="value"
-                                                type="number"
-                                                value={newProduct.value}
-                                                onChange={handleProductInputChange}
-                                                size="small"
-                                                required
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Estoque"
-                                                name="stock"
-                                                type="number"
-                                                value={newProduct.stock}
-                                                onChange={handleProductInputChange}
-                                                size="small"
-                                                required
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                select
-                                                fullWidth
-                                                label="Status"
-                                                name="status"
-                                                value={newProduct.status}
-                                                onChange={(e) => setNewProduct({
-                                                    ...newProduct,
-                                                    status: e.target.value === 'true'
-                                                })}
-                                                size="small"
-                                                required
-                                                SelectProps={{
-                                                    native: true,
-                                                }}
-                                            >
-                                                <option value="true">Ativo</option>
-                                                <option value="false">Inativo</option>
-                                            </TextField>
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <Button
-                                                variant="contained"
-                                                onClick={handleAddProduct}
-                                                fullWidth
-                                            >
-                                                Adicionar à Lista
-                                            </Button>
-                                        </Grid>
-                                    </Grid>
-                                </Box>
-
-                                <Divider sx={{ my: 2 }} />
-
+                            <Box sx={{ mb: 3 }}>
                                 <Typography variant="subtitle1" gutterBottom>
-                                    Produtos para Sincronizar ({productsToSync.length})
+                                    Adicionar Produto
                                 </Typography>
-
-                                {productsToSync.length > 0 ? (
-                                    <>
-                                        <TableContainer>
-                                            <Table size="small">
-                                                <TableHead>
-                                                    <TableRow>
-                                                        <TableCell>Nome</TableCell>
-                                                        <TableCell align="right">Ações</TableCell>
-                                                    </TableRow>
-                                                </TableHead>
-                                                <TableBody>
-                                                    {productsToSync.map((product, index) => (
-                                                        <TableRow key={index}>
-                                                            <TableCell>
-                                                                <Typography variant="body2">{product.name}</Typography>
-                                                                <Typography variant="caption">
-                                                                    {product.barcode} - R$ {product.value.toFixed(2)} - Estoque: {product.stock} - Status: {product.status ? 'Ativo' : 'Inativo'}
-                                                                </Typography>
-                                                            </TableCell>
-                                                            <TableCell align="right">
-                                                                <Button
-                                                                    size="small"
-                                                                    color="error"
-                                                                    onClick={() => handleRemoveProduct(index)}
-                                                                >
-                                                                    Remover
-                                                                </Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </TableContainer>
-
+                                <Grid container spacing={2}>
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField
+                                            fullWidth
+                                            label="Código de Barras"
+                                            name="barcode"
+                                            value={newProduct.barcode}
+                                            onChange={handleProductInputChange}
+                                            size="small"
+                                            required
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField
+                                            fullWidth
+                                            label="Nome do Produto"
+                                            name="name"
+                                            value={newProduct.name}
+                                            onChange={handleProductInputChange}
+                                            size="small"
+                                            required
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField
+                                            fullWidth
+                                            label="Preço (R$)"
+                                            name="value"
+                                            type="number"
+                                            value={newProduct.value}
+                                            onChange={handleProductInputChange}
+                                            size="small"
+                                            required
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField
+                                            fullWidth
+                                            label="Estoque"
+                                            name="stock"
+                                            type="number"
+                                            value={newProduct.stock}
+                                            onChange={handleProductInputChange}
+                                            size="small"
+                                            required
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField
+                                            select
+                                            fullWidth
+                                            label="Status"
+                                            name="status"
+                                            value={newProduct.status}
+                                            onChange={(e) => setNewProduct({
+                                                ...newProduct,
+                                                status: e.target.value === 'true'
+                                            })}
+                                            size="small"
+                                            required
+                                            SelectProps={{
+                                                native: true,
+                                            }}
+                                        >
+                                            <option value="true">Ativo</option>
+                                            <option value="false">Inativo</option>
+                                        </TextField>
+                                    </Grid>
+                                    <Grid item xs={12}>
                                         <Button
                                             variant="contained"
-                                            color="primary"
-                                            sx={{ mt: 2 }}
-                                            onClick={handleSyncProducts}
-                                            disabled={loading}
+                                            onClick={handleAddProduct}
+                                            fullWidth
                                         >
-                                            {loading ? <CircularProgress size={24} /> : 'Sincronizar Produtos'}
+                                            Adicionar à Lista
                                         </Button>
-                                    </>
-                                ) : (
-                                    <Typography variant="body2" color="textSecondary">
-                                        Nenhum produto adicionado para sincronização.
-                                    </Typography>
-                                )}
-                            </Paper>
-                        </Grid>
+                                    </Grid>
+                                </Grid>
+                            </Box>
+
+                            <Divider sx={{ my: 2 }} />
+
+                            <Typography variant="subtitle1" gutterBottom>
+                                Produtos para Sincronizar ({productsToSync.length})
+                            </Typography>
+
+                            {productsToSync.length > 0 ? (
+                                <>
+                                    <TableContainer>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>Nome</TableCell>
+                                                    <TableCell align="right">Ações</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {productsToSync.map((product, index) => (
+                                                    <TableRow key={index}>
+                                                        <TableCell>
+                                                            <Typography variant="body2">{product.name}</Typography>
+                                                            <Typography variant="caption">
+                                                                {product.barcode} - R$ {product.value.toFixed(2)} - Estoque: {product.stock} - Status: {product.status ? 'Ativo' : 'Inativo'}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell align="right">
+                                                            <Button
+                                                                size="small"
+                                                                color="error"
+                                                                onClick={() => handleRemoveProduct(index)}
+                                                            >
+                                                                Remover
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        sx={{ mt: 2 }}
+                                        onClick={handleSyncProducts}
+                                        disabled={loading}
+                                    >
+                                        {loading ? <CircularProgress size={24} /> : 'Sincronizar Produtos'}
+                                    </Button>
+                                </>
+                            ) : (
+                                <Typography variant="body2" color="textSecondary">
+                                    Nenhum produto adicionado para sincronização.
+                                </Typography>
+                            )}
+                        </Paper>
                     </Grid>
-                </Container>
+                </Grid>
             </Box>
-        </Box>
+        </Box >
     );
 }
 
