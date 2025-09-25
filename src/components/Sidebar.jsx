@@ -12,10 +12,9 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Dashboard as DashboardIcon,
-    Restaurant as RestaurantIcon,
+    LocalPharmacy as LocalPharmacyIcon,
     Sync as SyncIcon,
     Store as StoreIcon,
-    Category as CategoryIcon,
     LocalOffer as LocalOfferIcon
 } from '@mui/icons-material';
 import { useStoreStatus } from '../hooks/useStoreStatus';
@@ -29,9 +28,8 @@ function Sidebar({ mobileOpen, handleDrawerToggle }) {
 
     const menuItems = [
         { text: 'Inicio', icon: <DashboardIcon />, path: '/dashboard' },
-        { text: 'Sincronização', icon: <SyncIcon />, path: '/sincronizacao' },
-        { text: 'Catálogo', icon: <CategoryIcon />, path: '/catalogo' },
-        { text: 'Pedidos', icon: <RestaurantIcon />, path: '/pedidos' },
+        { text: 'Pedidos', icon: <LocalPharmacyIcon />, path: '/pedidos' },
+        { text: 'Sync Produtos', icon: <SyncIcon />, path: '/sincronizacao' },
         { text: 'Loja', icon: <StoreIcon />, path: '/loja' },
         { text: 'Promoções', icon: <LocalOfferIcon />, path: '/promocoes' },
     ];
