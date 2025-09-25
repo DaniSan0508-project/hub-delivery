@@ -316,6 +316,27 @@ function Sincronizacao() {
                                                 required
                                             />
                                         </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                            <TextField
+                                                select
+                                                fullWidth
+                                                label="Status"
+                                                name="status"
+                                                value={newProduct.status}
+                                                onChange={(e) => setNewProduct({
+                                                    ...newProduct,
+                                                    status: e.target.value === 'true'
+                                                })}
+                                                size="small"
+                                                required
+                                                SelectProps={{
+                                                    native: true,
+                                                }}
+                                            >
+                                                <option value="true">Ativo</option>
+                                                <option value="false">Inativo</option>
+                                            </TextField>
+                                        </Grid>
                                         <Grid item xs={12}>
                                             <Button
                                                 variant="contained"
@@ -350,7 +371,7 @@ function Sincronizacao() {
                                                             <TableCell>
                                                                 <Typography variant="body2">{product.name}</Typography>
                                                                 <Typography variant="caption">
-                                                                    {product.barcode} - R$ {product.value.toFixed(2)} - Estoque: {product.stock}
+                                                                    {product.barcode} - R$ {product.value.toFixed(2)} - Estoque: {product.stock} - Status: {product.status ? 'Ativo' : 'Inativo'}
                                                                 </Typography>
                                                             </TableCell>
                                                             <TableCell align="right">
