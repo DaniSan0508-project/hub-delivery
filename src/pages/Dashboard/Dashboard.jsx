@@ -586,65 +586,69 @@ function Dashboard() {
                                                             Nenhum horário configurado.
                                                         </Alert>
                                                     )}
+
                                                 </Card>
                                             </Grid>
-                                        </Grid>
-
-                                        <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
-                                            <Typography variant="h6" gutterBottom>
-                                                Pedidos por Status
-                                            </Typography>
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-                                                {Object.entries(orders.reduce((acc, order) => {
-                                                    const status = order.order.status;
-                                                    acc[status] = (acc[status] || 0) + 1;
-                                                    return acc;
-                                                }, {})).map(([status, count]) => (
-                                                    <Chip
-                                                        key={status}
-                                                        label={`${getStatusText(status)}: ${count}`}
-                                                        sx={{
-                                                            fontWeight: 'bold',
-                                                            fontSize: '0.875rem',
-                                                            backgroundColor: getStatusColor(status),
-                                                            color: 'white'
-                                                        }}
-                                                    />
-                                                ))}
-                                            </Box>
-                                        </Paper>
-
-                                        {/* Scheduled Interruptions */}
-                                        <Card sx={{ p: 2, borderRadius: 3, boxShadow: 3, mb: 4 }}>
-                                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                                                Interrupções Agendadas
-                                            </Typography>
-                                            <Alert severity="info" sx={{ mb: 2, mt: 1 }}>
-                                                As interrupções podem levar até 2 minutos para serem atualizadas no iFood.
-                                            </Alert>
-                                            {interruptions.length > 0 ? (
-                                                <Table size="small">
-                                                    <TableHead>
-                                                        <TableRow>
-                                                            <TableCell>Descrição</TableCell>
-                                                            <TableCell align="center">Início</TableCell>
-                                                            <TableCell align="center">Fim</TableCell>
-                                                        </TableRow>
-                                                    </TableHead>
-                                                    <TableBody>
-                                                        {interruptions.map((interruption) => (
-                                                            <TableRow key={interruption.id} hover>
-                                                                <TableCell>{interruption.description}</TableCell>
-                                                                <TableCell align="center">{new Date(interruption.start).toLocaleString()}</TableCell>
-                                                                <TableCell align="center">{new Date(interruption.end).toLocaleString()}</TableCell>
-                                                            </TableRow>
+                                            <Grid width={400}>
+                                                <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
+                                                    <Typography variant="h6" gutterBottom>
+                                                        Pedidos por Status
+                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+                                                        {Object.entries(orders.reduce((acc, order) => {
+                                                            const status = order.order.status;
+                                                            acc[status] = (acc[status] || 0) + 1;
+                                                            return acc;
+                                                        }, {})).map(([status, count]) => (
+                                                            <Chip
+                                                                key={status}
+                                                                label={`${getStatusText(status)}: ${count}`}
+                                                                sx={{
+                                                                    fontWeight: 'bold',
+                                                                    fontSize: '0.875rem',
+                                                                    backgroundColor: getStatusColor(status),
+                                                                    color: 'white'
+                                                                }}
+                                                            />
                                                         ))}
-                                                    </TableBody>
-                                                </Table>
-                                            ) : (
-                                                <Typography sx={{ mt: 2 }} color="textSecondary">Nenhuma interrupção agendada.</Typography>
-                                            )}
-                                        </Card>
+                                                    </Box>
+                                                </Paper>
+                                                <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
+                                                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                                                        Interrupções Agendadas
+                                                    </Typography>
+                                                    <Alert severity="info" sx={{ mb: 2, mt: 1 }}>
+                                                        As interrupções podem levar até 2 minutos para serem atualizadas no iFood.
+                                                    </Alert>
+                                                    {interruptions.length > 0 ? (
+                                                        <Table size="small">
+                                                            <TableHead>
+                                                                <TableRow>
+                                                                    <TableCell>Descrição</TableCell>
+                                                                    <TableCell align="center">Início</TableCell>
+                                                                    <TableCell align="center">Fim</TableCell>
+                                                                </TableRow>
+                                                            </TableHead>
+                                                            <TableBody>
+                                                                {interruptions.map((interruption) => (
+                                                                    <TableRow key={interruption.id} hover>
+                                                                        <TableCell>{interruption.description}</TableCell>
+                                                                        <TableCell align="center">{new Date(interruption.start).toLocaleString()}</TableCell>
+                                                                        <TableCell align="center">{new Date(interruption.end).toLocaleString()}</TableCell>
+                                                                    </TableRow>
+                                                                ))}
+                                                            </TableBody>
+                                                        </Table>
+                                                    ) : (
+                                                        <Typography sx={{ mt: 2 }} color="textSecondary">Nenhuma interrupção agendada.</Typography>
+                                                    )}
+                                                </Paper>
+
+                                            </Grid>
+                                            <Grid>
+
+                                            </Grid>
+                                        </Grid>
                                     </>
                                 )}
                             </Container>
