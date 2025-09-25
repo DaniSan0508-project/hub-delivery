@@ -1401,15 +1401,28 @@ function Pedidos() {
                                                                 <Typography variant="h6">Pedido #{order.id.substring(0, 8)}</Typography>
                                                                 <ScheduledOrderBadge order={order} />
                                                             </Box>
-                                                            <Chip
-                                                                label={getStatusText(order.status, order.id)}
-                                                                sx={{
-                                                                    backgroundColor: getStatusColor(order.status, order.id),
-                                                                    color: 'white',
-                                                                    fontWeight: 'bold'
-                                                                }}
-                                                                size="small"
-                                                            />
+                                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                                                <Chip
+                                                                    label={getStatusText(order.status, order.id)}
+                                                                    sx={{
+                                                                        backgroundColor: getStatusColor(order.status, order.id),
+                                                                        color: 'white',
+                                                                        fontWeight: 'bold'
+                                                                    }}
+                                                                    size="small"
+                                                                />
+                                                                {order.delivery_provider === 'TAKEOUT' && (
+                                                                    <Chip
+                                                                        label="RETIRADA EM LOJA"
+                                                                        sx={{
+                                                                            backgroundColor: '#1976d2',
+                                                                            color: 'white',
+                                                                            fontWeight: 'bold'
+                                                                        }}
+                                                                        size="small"
+                                                                    />
+                                                                )}
+                                                            </Box>
                                                         </Box>
 
                                                         {/* SEÇÃO DE AGENDAMENTO - APENAS PARA PEDIDOS AGENDADOS */}
