@@ -361,25 +361,6 @@ function Dashboard() {
                                                     Visão geral do seu negócio
                                                 </Typography>
                                             </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Box sx={{ textAlign: 'right' }}>
-                                                    <Typography variant="body2" color="textSecondary">Status da Loja</Typography>
-                                                    <Stack direction="row" alignItems="center" justifyContent="flex-end">
-                                                        <Box
-                                                            sx={{
-                                                                width: 12,
-                                                                height: 12,
-                                                                borderRadius: '50%',
-                                                                bgcolor: 'success.main', // Using green for open status
-                                                                mr: 1,
-                                                                boxShadow: '0 0 4px 2px rgba(76, 175, 80, 0.5)'
-                                                            }}
-                                                        />
-                                                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>Aberto</Typography>
-                                                    </Stack>
-                                                </Box>
-                                                <AccessTimeIcon sx={{ fontSize: 32, color: 'success.main' }} />
-                                            </Box>
                                         </Box>
 
                                         {/* KPI Cards Section */}
@@ -467,6 +448,31 @@ function Dashboard() {
                                                         </Typography>
                                                     </CardContent>
                                                 </Card>
+                                            </Grid>
+                                            <Grid item xs={12} md={4}>
+                                                <Paper elevation={3} sx={{ p: 2, mb: 4 }} style={{ height: '100%', width: '100%' }}>
+                                                    <Typography variant="h6" gutterBottom>
+                                                        Pedidos por Status
+                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+                                                        {Object.entries(orders.reduce((acc, order) => {
+                                                            const status = order.order.status;
+                                                            acc[status] = (acc[status] || 0) + 1;
+                                                            return acc;
+                                                        }, {})).map(([status, count]) => (
+                                                            <Chip
+                                                                key={status}
+                                                                label={`${getStatusText(status)}: ${count}`}
+                                                                sx={{
+                                                                    fontWeight: 'bold',
+                                                                    fontSize: '0.875rem',
+                                                                    backgroundColor: getStatusColor(status),
+                                                                    color: 'white'
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </Box>
+                                                </Paper>
                                             </Grid>
                                         </Grid>
 
@@ -590,30 +596,7 @@ function Dashboard() {
                                                 </Card>
                                             </Grid>
                                             <Grid width={400}>
-                                                <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
-                                                    <Typography variant="h6" gutterBottom>
-                                                        Pedidos por Status
-                                                    </Typography>
-                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-                                                        {Object.entries(orders.reduce((acc, order) => {
-                                                            const status = order.order.status;
-                                                            acc[status] = (acc[status] || 0) + 1;
-                                                            return acc;
-                                                        }, {})).map(([status, count]) => (
-                                                            <Chip
-                                                                key={status}
-                                                                label={`${getStatusText(status)}: ${count}`}
-                                                                sx={{
-                                                                    fontWeight: 'bold',
-                                                                    fontSize: '0.875rem',
-                                                                    backgroundColor: getStatusColor(status),
-                                                                    color: 'white'
-                                                                }}
-                                                            />
-                                                        ))}
-                                                    </Box>
-                                                </Paper>
-                                                <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
+                                                <Paper elevation={3} sx={{ p: 2, mb: 4 }} style={{ height: '100%', width: '100%' }}>
                                                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
                                                         Interrupções Agendadas
                                                     </Typography>
@@ -656,7 +639,7 @@ function Dashboard() {
                     </>
                 )}
             </Box>
-        </Box>
+        </Box >
     );
 }
 
