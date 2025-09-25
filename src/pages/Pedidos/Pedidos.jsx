@@ -296,6 +296,8 @@ function Pedidos() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [paymentFilter, setPaymentFilter] = useState('all'); // Novo filtro para pagamento
     const [orderTypeFilter, setOrderTypeFilter] = useState('all'); // Filtro para tipo de pedido
+    const [dateFilterStart, setDateFilterStart] = useState(''); // Data inicial para filtro
+    const [dateFilterEnd, setDateFilterEnd] = useState(''); // Data final para filtro
     const [sortBy, setSortBy] = useState('createdAt'); // Default sort by creation date
     const [sortOrder, setSortOrder] = useState('desc'); // Default descending (newest first)
 
@@ -578,9 +580,21 @@ function Pedidos() {
                 } else if (statusFilter === 'RFI') {
                     // Tratar RFI da mesma forma que READY_TO_PICKUP
                     return order.status === 'READY_TO_PICKUP' || order.status === 'Ready to Pickup' || order.status === 'RFI';
-                } else if (statusFilter === 'Cancelled' || statusFilter === 'CAR') {
+                } else if (statusFilter === 'Cancelled') {
                     // Tratar Cancelled e CAR da mesma forma
                     return order.status === 'Cancelled' || order.status === 'CAR';
+                } else if (statusFilter === 'SPS') {
+                    // Handle both SPS and Separation Started
+                    return order.status === 'SPS' || order.status === 'Separation Started';
+                } else if (statusFilter === 'SPE') {
+                    // Handle both SPE and Separation Ended
+                    return order.status === 'SPE' || order.status === 'Separation Ended';
+                } else if (statusFilter === 'READY_TO_PICKUP') {
+                    // Handle READY_TO_PICKUP and Ready to Pickup
+                    return order.status === 'READY_TO_PICKUP' || order.status === 'Ready to Pickup';
+                } else if (statusFilter === 'Arrived') {
+                    // Handle both Arrived and Arrived at Destination
+                    return order.status === 'Arrived' || order.status === 'Arrived at Destination';
                 } else {
                     return order.status === statusFilter;
                 }
@@ -610,6 +624,49 @@ function Pedidos() {
                     return order.is_scheduled === true;
                 } else if (orderTypeFilter === 'immediate') {
                     return !order.is_scheduled || order.is_scheduled === false;
+                }
+            }
+
+            // Apply date filter
+            if (dateFilterStart || dateFilterEnd) {
+                // Convert order's createdAt to a proper Date object
+                let orderDate;
+                if (order.createdAt) {
+                    // Check if it's already a Date object or needs parsing
+                    if (order.createdAt instanceof Date) {
+                        orderDate = order.createdAt;
+                    } else {
+                        // Parse the string format from the API: "2025-09-25 18:47:41"
+                        orderDate = new Date(order.createdAt.replace(' ', 'T'));
+                    }
+                } else {
+                    // If no createdAt date, we can't filter, so include the order
+                    // (Or we could exclude it if we want strict filtering)
+                    return true;
+                }
+
+                // Ensure valid date
+                if (isNaN(orderDate.getTime())) {
+                    // Invalid date, we can't filter this order by date, so include it
+                    return true;
+                }
+
+                // Apply start date filter
+                if (dateFilterStart) {
+                    const startDate = new Date(dateFilterStart);
+                    if (orderDate < startDate) {
+                        return false;
+                    }
+                }
+
+                // Apply end date filter
+                if (dateFilterEnd) {
+                    const endDate = new Date(dateFilterEnd);
+                    // Add one day to include orders from the entire end date
+                    endDate.setDate(endDate.getDate() + 1);
+                    if (orderDate >= endDate) {
+                        return false;
+                    }
                 }
             }
 
@@ -1332,20 +1389,15 @@ function Pedidos() {
                                             <MenuItem value="Placed">Recebido</MenuItem>
                                             <MenuItem value="Confirmed">Confirmado</MenuItem>
                                             <MenuItem value="SPS">Separação iniciada</MenuItem>
-                                            <MenuItem value="Separation Started">Separação iniciada</MenuItem>
                                             <MenuItem value="SPE">Separação finalizada</MenuItem>
-                                            <MenuItem value="Separation Ended">Separação finalizada</MenuItem>
                                             <MenuItem value="READY_TO_PICKUP">Pronto para Retirada</MenuItem>
-                                            <MenuItem value="Ready to Pickup">Pronto para Retirada</MenuItem>
                                             <MenuItem value="RFI">Pronto para Retirada (RFI)</MenuItem>
                                             <MenuItem value="Dispatched">Despachado</MenuItem>
                                             <MenuItem value="waitingWebhook">Aguardando iFood</MenuItem>
                                             <MenuItem value="Arrived">Chegou ao Destino</MenuItem>
-                                            <MenuItem value="Arrived at Destination">Chegou ao Destino</MenuItem>
                                             <MenuItem value="Concluded">Concluído</MenuItem>
                                             <MenuItem value="CANCELLATION_REQUESTED">Cancelamento em andamento</MenuItem>
                                             <MenuItem value="Cancelled">Cancelado</MenuItem>
-                                            <MenuItem value="CAR">Cancelado</MenuItem>
                                         </Select>
                                     </FormControl>
                                 </Grid>
@@ -1379,6 +1431,32 @@ function Pedidos() {
                                             <MenuItem value="immediate">Pedidos Imediatos</MenuItem>
                                         </Select>
                                     </FormControl>
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <TextField
+                                        fullWidth
+                                        label="Data Início"
+                                        type="datetime-local"
+                                        value={dateFilterStart}
+                                        onChange={(e) => setDateFilterStart(e.target.value)}
+                                        size="small"
+                                        InputLabelProps={{
+                                            shrink: true,
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <TextField
+                                        fullWidth
+                                        label="Data Fim"
+                                        type="datetime-local"
+                                        value={dateFilterEnd}
+                                        onChange={(e) => setDateFilterEnd(e.target.value)}
+                                        size="small"
+                                        InputLabelProps={{
+                                            shrink: true,
+                                        }}
+                                    />
                                 </Grid>
                             </Grid>
 
