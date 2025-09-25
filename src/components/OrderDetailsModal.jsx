@@ -80,10 +80,13 @@ const PaymentBadge = ({ payment }) => {
 const CashChangeInfo = ({ payment }) => {
     if (!payment?.requires_cash_change) return null;
 
+    console.log('CashChangeInfo payment:', payment);
+    console.log('CashChangeInfo payment.cash_change_for:', payment.cash_change_for)
+
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
             <Typography variant="caption" color="warning.main">
-                💵 Troco para: R$ {payment.cash_change_for?.toFixed(2).replace('.', ',') || '0,00'}
+                💵 Troco para: R$ {(parseFloat(payment.cash_change_for) || 0).toFixed(2).replace('.', ',')}
             </Typography>
         </Box>
     );
@@ -94,7 +97,7 @@ const ScheduledOrderBadge = ({ order }) => {
     if (!order?.is_scheduled) return null;
 
     return (
-        <Chip 
+        <Chip
             icon={<AccessTimeIcon />}
             label="Pedido Agendado"
             color="warning"
@@ -109,8 +112,8 @@ const ScheduledOrderBadge = ({ order }) => {
 const formatTime = (dateTimeStr) => {
     if (!dateTimeStr) return 'N/A';
     const date = new Date(dateTimeStr);
-    return date.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
+    return date.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
         minute: '2-digit',
         timeZone: 'America/Sao_Paulo'
     });
@@ -119,11 +122,11 @@ const formatTime = (dateTimeStr) => {
 // Função para calcular tempo restante
 const getTimeStatus = (order) => {
     if (!order?.preparation_start_time || !order?.delivery_window?.start) return 'Horário não definido';
-    
+
     const now = new Date();
     const prepStart = new Date(order.preparation_start_time);
     const deliveryStart = new Date(order.delivery_window.start);
-    
+
     if (now < prepStart) {
         const diffHours = Math.ceil((prepStart - now) / (1000 * 60 * 60));
         return `Preparo inicia em ${diffHours}h`;
@@ -137,23 +140,23 @@ const getTimeStatus = (order) => {
 // Função auxiliar para calcular progresso
 const calculateProgress = (order) => {
     if (!order?.preparation_start_time || !order?.delivery_window?.end) return 0;
-    
+
     const now = new Date();
     const prepStart = new Date(order.preparation_start_time);
     const deliveryEnd = new Date(order.delivery_window.end);
-    
+
     const totalTime = deliveryEnd - prepStart;
     const elapsed = now - prepStart;
-    
+
     if (elapsed <= 0) return 0;
     if (elapsed >= totalTime) return 100;
-    
+
     return Math.min(100, Math.max(0, (elapsed / totalTime) * 100));
 };
 
 const getProgressLabel = (order) => {
     if (!order) return "Informações insuficientes";
-    
+
     const progress = calculateProgress(order);
     if (progress === 0) return "Aguardando início do preparo";
     if (progress < 50) return "Em preparação";
@@ -166,13 +169,13 @@ const TimeWindowDisplay = ({ order }) => {
     if (!order?.is_scheduled) return null;
 
     // Alerta para quando o tempo de preparo já deveria ter começado
-    const showUrgentAlert = order.preparation_start_time && 
+    const showUrgentAlert = order.preparation_start_time &&
         new Date() > new Date(order.preparation_start_time);
 
     return (
-        <Box sx={{ 
-            p: 2, 
-            bgcolor: 'warning.light', 
+        <Box sx={{
+            p: 2,
+            bgcolor: 'warning.light',
             borderRadius: 2,
             border: '1px solid',
             borderColor: 'warning.main',
@@ -181,14 +184,14 @@ const TimeWindowDisplay = ({ order }) => {
             <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
                 ⏰ Pedido Agendado - {getTimeStatus(order)}
             </Typography>
-            
+
             {/* Alerta para pedidos que precisam de atenção */}
             {showUrgentAlert && (
                 <Alert severity="warning" sx={{ mt: 1, mb: 2 }}>
                     ⚠️ Preparo deveria ter iniciado
                 </Alert>
             )}
-            
+
             <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -203,7 +206,7 @@ const TimeWindowDisplay = ({ order }) => {
                         </Box>
                     </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <DeliveryDiningIcon color="primary" />
@@ -218,11 +221,11 @@ const TimeWindowDisplay = ({ order }) => {
                     </Box>
                 </Grid>
             </Grid>
-            
+
             {/* Barra de progresso visual */}
             <Box sx={{ mt: 2 }}>
-                <LinearProgress 
-                    variant="determinate" 
+                <LinearProgress
+                    variant="determinate"
                     value={calculateProgress(order)}
                     color="warning"
                 />
@@ -366,40 +369,40 @@ const OrderDetailsModal = ({ open, onClose, orderId }) => {
                                     size="small"
                                 />
                             </Box>
-                            
+
                             {/* SEÇÃO DE AGENDAMENTO - APENAS PARA PEDIDOS AGENDADOS */}
                             {orderData.order?.is_scheduled && (
                                 <TimeWindowDisplay order={orderData.order} />
                             )}
-                            
+
                             {/* Adicionar códigos do pedido */}
                             <Box sx={{ display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap' }}>
                                 {orderData.order?.pickup_code && (
-                                    <Chip 
-                                        label={`Retirada: ${orderData.order.pickup_code}`} 
-                                        variant="outlined" 
-                                        size="small" 
+                                    <Chip
+                                        label={`Retirada: ${orderData.order.pickup_code}`}
+                                        variant="outlined"
+                                        size="small"
                                     />
                                 )}
                                 {orderData.order?.short_code && (
-                                    <Chip 
-                                        label={`Pedido: ${orderData.order.short_code}`} 
-                                        variant="outlined" 
-                                        size="small" 
+                                    <Chip
+                                        label={`Pedido: ${orderData.order.short_code}`}
+                                        variant="outlined"
+                                        size="small"
                                     />
                                 )}
                                 {orderData.order?.delivery_code && (
-                                    <Chip 
-                                        label={`Entrega: ${orderData.order.delivery_code}`} 
-                                        variant="outlined" 
-                                        size="small" 
+                                    <Chip
+                                        label={`Entrega: ${orderData.order.delivery_code}`}
+                                        variant="outlined"
+                                        size="small"
                                     />
                                 )}
                                 {orderData.order?.customer_code && (
-                                    <Chip 
-                                        label={`Cliente: ${orderData.order.customer_code}`} 
-                                        variant="outlined" 
-                                        size="small" 
+                                    <Chip
+                                        label={`Cliente: ${orderData.order.customer_code}`}
+                                        variant="outlined"
+                                        size="small"
                                     />
                                 )}
                             </Box>
