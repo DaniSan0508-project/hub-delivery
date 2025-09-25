@@ -29,7 +29,7 @@ function Sidebar({ mobileOpen, handleDrawerToggle }) {
     const menuItems = [
         { text: 'Inicio', icon: <DashboardIcon />, path: '/dashboard' },
         { text: 'Pedidos', icon: <LocalPharmacyIcon />, path: '/pedidos' },
-        { text: 'Sync Produtos', icon: <SyncIcon />, path: '/sincronizacao' },
+        { text: 'Produtos', icon: <SyncIcon />, path: '/sincronizacao' },
         { text: 'Loja', icon: <StoreIcon />, path: '/loja' },
         { text: 'Promoções', icon: <LocalOfferIcon />, path: '/promocoes' },
     ];

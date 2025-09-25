@@ -23,10 +23,23 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Grid
+    Grid,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    InputAdornment,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu as MenuIcon } from '@mui/icons-material';
+import {
+    Menu as MenuIcon,
+    Search as SearchIcon,
+    Sync as SyncIcon
+} from '@mui/icons-material';
 import Sidebar from '../../components/Sidebar';
 import productService from '../../services/productService';
 
@@ -51,6 +64,18 @@ function Sincronizacao() {
         stock: '',
         status: true
     });
+
+    // State for Sync Produtos functionality
+    const [syncProdutos, setSyncProdutos] = useState([]);
+    const [loadingSyncProdutos, setLoadingSyncProdutos] = useState(false);
+    const [errorSyncProdutos, setErrorSyncProdutos] = useState(null);
+    const [openSyncProdutosModal, setOpenSyncProdutosModal] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalItems, setTotalItems] = useState(0);
+    const [searchName, setSearchName] = useState('');
+    const [searchBarcode, setSearchBarcode] = useState('');
+    const [filterStatus, setFilterStatus] = useState('all');
 
     useEffect(() => {
         let isMounted = true;
@@ -179,6 +204,99 @@ function Sincronizacao() {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Fetch Sync Produtos with pagination and filtering
+    const fetchSyncProdutos = async (page = 1) => {
+        try {
+            setLoadingSyncProdutos(true);
+            setErrorSyncProdutos(null);
+
+            const token = localStorage.getItem('authToken');
+            const params = new URLSearchParams({
+                page: page,
+                per_page: 10
+            });
+
+            // Add name filter if exists
+            if (searchName) {
+                params.append('name', searchName);
+            }
+
+            // Add barcode filter if exists
+            if (searchBarcode) {
+                params.append('barcode', searchBarcode);
+            }
+
+            // Add status filter if not 'all'
+            if (filterStatus !== 'all') {
+                params.append('status', filterStatus);
+            }
+
+            // Using the same base URL pattern as other services in the application
+            const response = await fetch(`http://localhost:8090/api/hub/local/items?${params}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // API returns structure like: { success: true, data: { data: [...], current_page, last_page, total, per_page, ... } }
+            setSyncProdutos(data.data?.data || []);
+            setTotalPages(data.data?.last_page || 1);
+            setTotalItems(data.data?.total || 0);
+            setCurrentPage(data.data?.current_page || 1);
+        } catch (error) {
+            console.error('Error fetching sync produtos:', error);
+            setErrorSyncProdutos(error.message || 'Erro ao carregar produtos sincronizados.');
+        } finally {
+            setLoadingSyncProdutos(false);
+        }
+    };
+
+    // Handle opening the sync produtos modal
+    const handleOpenSyncProdutosModal = () => {
+        setCurrentPage(1); // Reset to first page when opening
+        fetchSyncProdutos(1);
+        setOpenSyncProdutosModal(true);
+    };
+
+    // Handle closing the sync produtos modal
+    const handleCloseSyncProdutosModal = () => {
+        setOpenSyncProdutosModal(false);
+    };
+
+    // Handle page change for sync produtos
+    const handlePageChange = (newPage) => {
+        setCurrentPage(newPage);
+        fetchSyncProdutos(newPage);
+    };
+
+    // Handle name search for sync produtos
+    const handleSearchNameChange = (e) => {
+        setSearchName(e.target.value);
+    };
+
+    // Handle barcode search for sync produtos
+    const handleSearchBarcodeChange = (e) => {
+        setSearchBarcode(e.target.value);
+    };
+
+    // Handle status filter change for sync produtos
+    const handleFilterStatusChange = (e) => {
+        setFilterStatus(e.target.value);
+    };
+
+    // Handle search submission for sync produtos
+    const handleSearchSubmit = () => {
+        setCurrentPage(1); // Reset to first page when searching
+        fetchSyncProdutos(1);
     };
 
     if (!user) {
@@ -402,7 +520,226 @@ function Sincronizacao() {
                             )}
                         </Paper>
                     </Grid>
+                    
+                    {/* Section for Sync Produtos */}
+                    <Grid item xs={12} md={6}>
+                        <Paper elevation={3} sx={{ p: 3 }}>
+                            <Typography variant="h6" gutterBottom>
+                                Produtos Sincronizados
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                                Visualize os produtos sincronizados com o hub
+                            </Typography>
+                            
+                            <Button
+                                variant="contained"
+                                startIcon={<SyncIcon />}
+                                onClick={handleOpenSyncProdutosModal}
+                                fullWidth
+                            >
+                                Visualizar Produtos Sincronizados
+                            </Button>
+                        </Paper>
+                    </Grid>
                 </Grid>
+                
+                {/* Modal for Sync Produtos */}
+                <Dialog 
+                    open={openSyncProdutosModal} 
+                    onClose={handleCloseSyncProdutosModal}
+                    maxWidth="md"
+                    fullWidth
+                >
+                    <DialogTitle>
+                        Produtos Sincronizados
+                    </DialogTitle>
+                    
+                    <DialogContent dividers>
+                        {errorSyncProdutos && (
+                            <Alert severity="error" sx={{ mb: 2 }}>
+                                {errorSyncProdutos}
+                            </Alert>
+                        )}
+                        
+                        {/* Filters */}
+                        <Grid container spacing={2} sx={{ mb: 2 }}>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Buscar por Nome"
+                                    variant="outlined"
+                                    size="small"
+                                    value={searchName}
+                                    onChange={handleSearchNameChange}
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <SearchIcon 
+                                                    onClick={handleSearchSubmit} 
+                                                    style={{ cursor: 'pointer' }}
+                                                />
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleSearchSubmit();
+                                        }
+                                    }}
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Buscar por Código de Barras"
+                                    variant="outlined"
+                                    size="small"
+                                    value={searchBarcode}
+                                    onChange={handleSearchBarcodeChange}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleSearchSubmit();
+                                        }
+                                    }}
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <FormControl fullWidth size="small">
+                                    <InputLabel>Status</InputLabel>
+                                    <Select
+                                        value={filterStatus}
+                                        label="Status"
+                                        onChange={handleFilterStatusChange}
+                                    >
+                                        <MenuItem value="all">Todos</MenuItem>
+                                        <MenuItem value="active">Ativo</MenuItem>
+                                        <MenuItem value="inactive">Inativo</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Button
+                                    variant="contained"
+                                    onClick={handleSearchSubmit}
+                                    sx={{ mr: 1 }}
+                                >
+                                    Filtrar
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    onClick={() => {
+                                        setSearchName('');
+                                        setSearchBarcode('');
+                                        setFilterStatus('all');
+                                        setCurrentPage(1);
+                                        fetchSyncProdutos(1);
+                                    }}
+                                >
+                                    Limpar Filtros
+                                </Button>
+                            </Grid>
+                        </Grid>
+                        
+                        {loadingSyncProdutos ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                                <CircularProgress />
+                            </Box>
+                        ) : (
+                            <>
+                                {/* Products Table */}
+                                <TableContainer>
+                                    <Table size="small">
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell>Nome</TableCell>
+                                                <TableCell>EAN</TableCell>
+                                                <TableCell align="right">Preço</TableCell>
+                                                <TableCell align="center">Estoque</TableCell>
+                                                <TableCell align="center">Status</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {syncProdutos && syncProdutos.length > 0 ? (
+                                                syncProdutos.map((produto, index) => (
+                                                    <TableRow key={index}>
+                                                        <TableCell>
+                                                            <Typography variant="body2">
+                                                                {produto.name || 'Nome não informado'}
+                                                            </Typography>
+                                                            {produto.external_code && (
+                                                                <Typography variant="caption" color="textSecondary">
+                                                                    Código: {produto.external_code}
+                                                                </Typography>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>{produto.barcode || 'N/A'}</TableCell>
+                                                        <TableCell align="right">R$ {(parseFloat(produto.value || 0)).toFixed(2)}</TableCell>
+                                                        <TableCell align="center">{produto.stock_quantity || produto.quantity || 0}</TableCell>
+                                                        <TableCell align="center">
+                                                            <Typography 
+                                                                variant="caption" 
+                                                                sx={{ 
+                                                                    color: produto.sync_status === 'synced' ? 'success.main' : 'warning.main' 
+                                                                }}
+                                                            >
+                                                                {produto.sync_status === 'synced' ? 'Sincronizado' : 'Não sincronizado'}
+                                                            </Typography>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={5} align="center">
+                                                        Nenhum produto encontrado
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                                
+                                {/* Pagination info */}
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                                    <Typography variant="body2" color="textSecondary">
+                                        Mostrando {(currentPage - 1) * 10 + 1} - {Math.min(currentPage * 10, totalItems)} de {totalItems} produtos
+                                    </Typography>
+                                    
+                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                        <Button
+                                            variant="outlined"
+                                            size="small"
+                                            disabled={currentPage === 1}
+                                            onClick={() => handlePageChange(currentPage - 1)}
+                                        >
+                                            Anterior
+                                        </Button>
+                                        
+                                        <Typography variant="body2" sx={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            px: 2 
+                                        }}>
+                                            Página {currentPage} de {totalPages}
+                                        </Typography>
+                                        
+                                        <Button
+                                            variant="outlined"
+                                            size="small"
+                                            disabled={currentPage === totalPages}
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                        >
+                                            Próxima
+                                        </Button>
+                                    </Box>
+                                </Box>
+                            </>
+                        )}
+                    </DialogContent>
+                    
+                    <DialogActions>
+                        <Button onClick={handleCloseSyncProdutosModal}>Fechar</Button>
+                    </DialogActions>
+                </Dialog>
             </Box>
         </Box >
     );
