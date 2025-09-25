@@ -59,11 +59,7 @@ function Dashboard() {
     });
     const [openingHours, setOpeningHours] = useState([]);
     const [interruptions, setInterruptions] = useState([]);
-    const [paymentStats, setPaymentStats] = useState({
-        onlinePayments: 0,
-        inPersonPayments: 0,
-        ifoodLiability: 0
-    });
+    
 
     const fetchDashboardData = useCallback(async (token) => {
         try {
@@ -80,9 +76,8 @@ function Dashboard() {
             setMerchantData(merchantData);
             setOrders(ordersData.orders);
             calculateSalesMetrics(ordersData.orders);
-            calculatePaymentStats(ordersData.orders);
-            setOpeningHours(openingHoursData.shifts);
-            setInterruptions(interruptionsData);
+        setOpeningHours(openingHoursData.shifts);
+        setInterruptions(interruptionsData);
 
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
@@ -142,31 +137,7 @@ function Dashboard() {
         });
     };
 
-    const calculatePaymentStats = (orders) => {
-        let onlinePayments = 0;
-        let inPersonPayments = 0;
-        let ifoodLiability = 0;
-
-        orders.forEach(order => {
-            if (order.order && order.order.payment) {
-                if (order.order.payment.in_person) {
-                    inPersonPayments++;
-                } else {
-                    onlinePayments++;
-                }
-
-                if (order.order.payment.liability === 'IFOOD') {
-                    ifoodLiability++;
-                }
-            }
-        });
-
-        setPaymentStats({
-            onlinePayments,
-            inPersonPayments,
-            ifoodLiability
-        });
-    };
+    
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -202,6 +173,7 @@ function Dashboard() {
             case 'Arrived':
             case 'Arrived at Destination': return 'Chegou ao Destino';
             case 'Concluded': return 'Concluído';
+            case 'Cancelled': return 'Cancelado';
             default: return status;
         }
     };
@@ -285,21 +257,9 @@ function Dashboard() {
                         </Box>
                     ) : (
                         <>
-                            {merchantData && (
-                                <Box sx={{ mb: 4 }}>
-                                    <Typography variant="h4" gutterBottom>
-                                        {merchantData.name || 'Nome não informado'}
-                                    </Typography>
-                                    <Typography variant="h6" color="textSecondary">
-                                        {merchantData.corporateName || 'Razão social não informada'}
-                                    </Typography>
-                                </Box>
-                            )}
+                            
 
                             <Box sx={{ position: 'relative', mb: 4 }}>
-                                <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
-                                    Resumo de Vendas
-                                </Typography>
 
                                 <Box sx={{
                                     position: 'absolute',
@@ -441,135 +401,10 @@ function Dashboard() {
                                         </CardContent>
                                     </Card>
                                 </Grid>
-                                <Grid item xs={12} sm={6} lg={3} sx={{ padding: 1 }}>
-                                    <Card sx={{
-                                        height: '100%',
-                                        boxShadow: 4,
-                                        transition: 'transform 0.2s, box-shadow 0.2s',
-                                        '&:hover': {
-                                            transform: 'translateY(-4px)',
-                                            boxShadow: 6
-                                        },
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        borderRadius: 2
-                                    }}>
-                                        <CardContent sx={{
-                                            flexGrow: 1,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            textAlign: 'center',
-                                            padding: 3
-                                        }}>
-                                            <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontWeight: 500 }}>
-                                                Ticket Médio
-                                            </Typography>
-                                            <Typography variant="h3" color="info.main" sx={{ fontWeight: 'bold', mt: 1 }}>
-                                                R$ {salesMetrics.averageOrderValue.toFixed(2).replace('.', ',')}
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
+                                
                             </Grid>
 
-                            {/* Payment Statistics */}
-                            <Grid container spacing={2} sx={{ mb: 4, width: '100%', margin: 0 }}>
-                                <Grid item xs={12} md={4} sx={{ padding: 1 }}>
-                                    <Card sx={{
-                                        height: '100%',
-                                        boxShadow: 4,
-                                        transition: 'transform 0.2s, box-shadow 0.2s',
-                                        '&:hover': {
-                                            transform: 'translateY(-4px)',
-                                            boxShadow: 6
-                                        },
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        borderRadius: 2
-                                    }}>
-                                        <CardContent sx={{
-                                            flexGrow: 1,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            textAlign: 'center',
-                                            padding: 3
-                                        }}>
-                                            <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontWeight: 500 }}>
-                                                Pagamentos Online
-                                            </Typography>
-                                            <Typography variant="h3" color="primary" sx={{ fontWeight: 'bold', mt: 1 }}>
-                                                {paymentStats.onlinePayments}
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                                <Grid item xs={12} md={4} sx={{ padding: 1 }}>
-                                    <Card sx={{
-                                        height: '100%',
-                                        boxShadow: 4,
-                                        transition: 'transform 0.2s, box-shadow 0.2s',
-                                        '&:hover': {
-                                            transform: 'translateY(-4px)',
-                                            boxShadow: 6
-                                        },
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        borderRadius: 2
-                                    }}>
-                                        <CardContent sx={{
-                                            flexGrow: 1,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            textAlign: 'center',
-                                            padding: 3
-                                        }}>
-                                            <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontWeight: 500 }}>
-                                                Pagamentos na Entrega
-                                            </Typography>
-                                            <Typography variant="h3" color="secondary" sx={{ fontWeight: 'bold', mt: 1 }}>
-                                                {paymentStats.inPersonPayments}
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                                <Grid item xs={12} md={4} sx={{ padding: 1 }}>
-                                    <Card sx={{
-                                        height: '100%',
-                                        boxShadow: 4,
-                                        transition: 'transform 0.2s, box-shadow 0.2s',
-                                        '&:hover': {
-                                            transform: 'translateY(-4px)',
-                                            boxShadow: 6
-                                        },
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        borderRadius: 2
-                                    }}>
-                                        {/* <CardContent sx={{ 
-                                            flexGrow: 1,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            textAlign: 'center',
-                                            padding: 3
-                                        }}>
-                                            <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontWeight: 500 }}>
-                                                Responsabilidade iFood
-                                            </Typography>
-                                            <Typography variant="h3" color="info.main" sx={{ fontWeight: 'bold', mt: 1 }}>
-                                                {paymentStats.ifoodLiability}
-                                            </Typography>
-                                        </CardContent> */}
-                                    </Card>
-                                </Grid>
-                            </Grid>
+
 
                             <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
                                 <Typography variant="h6" gutterBottom>

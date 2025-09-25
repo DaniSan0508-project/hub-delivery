@@ -28,7 +28,7 @@ function Sidebar({ mobileOpen, handleDrawerToggle }) {
     const { storeStatus, loadingStatus, getStatusColor, getStatusText } = useStoreStatus();
 
     const menuItems = [
-        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+        { text: 'Inicio', icon: <DashboardIcon />, path: '/dashboard' },
         { text: 'Sincronização', icon: <SyncIcon />, path: '/sincronizacao' },
         { text: 'Catálogo', icon: <CategoryIcon />, path: '/catalogo' },
         { text: 'Pedidos', icon: <RestaurantIcon />, path: '/pedidos' },
