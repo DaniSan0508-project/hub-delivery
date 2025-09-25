@@ -383,7 +383,7 @@ function Dashboard() {
                                         </Box>
 
                                         {/* KPI Cards Section */}
-                                        <Grid container spacing={2} sx={{ mb: 3 }}>
+                                        <Grid container spacing={3} sx={{ mb: 3 }}>
                                             <Grid item xs={12} md={4}>
                                                 <Card sx={{
                                                     height: '100%',
@@ -415,7 +415,7 @@ function Dashboard() {
                                             <Grid item xs={12} md={4}>
                                                 <Card sx={{
                                                     height: '100%',
-                                                    backgroundColor: 'secondary.main',
+                                                    backgroundColor: 'info.main',
                                                     color: 'white',
                                                     borderRadius: 3,
                                                     boxShadow: 3,
@@ -423,7 +423,7 @@ function Dashboard() {
                                                 }}>
                                                     <CardContent sx={{ textAlign: 'center' }}>
                                                         <Avatar sx={{
-                                                            bgcolor: 'rgba(255,255,255,0.2)',
+                                                            bgcolor: 'rgba(255, 0, 0, 0.2)',
                                                             width: 56,
                                                             height: 56,
                                                             mx: 'auto',
@@ -473,7 +473,7 @@ function Dashboard() {
                                         {/* Charts Section */}
                                         <Grid container spacing={3} sx={{ mb: 4 }}>
                                             {/* Orders by Status Chart */}
-                                            <Grid item xs={12} md={8}>
+                                            <Grid item xs={12} md={9}>
                                                 <Card sx={{
                                                     height: '100%',
                                                     p: 2,
@@ -484,7 +484,7 @@ function Dashboard() {
                                                         Distribuição de Pedidos por Status
                                                     </Typography>
                                                     {orders.length > 0 ? (
-                                                        <Box sx={{ height: 300 }}>
+                                                        <Box sx={{ height: 300, width: 400 }}>
                                                             <ResponsiveContainer width="100%" height="100%">
                                                                 <PieChart>
                                                                     <Pie
@@ -495,9 +495,9 @@ function Dashboard() {
                                                                         }, {})).map(([status, count]) => ({ name: status, value: count }))}
                                                                         cx="50%"
                                                                         cy="50%"
-                                                                        labelLine={false}
-                                                                        outerRadius={80}
-                                                                        fill="#8884d8"
+                                                                        innerRadius={60}
+                                                                        outerRadius={100}
+                                                                        paddingAngle={2}
                                                                         dataKey="value"
                                                                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                                                                     >
@@ -505,11 +505,33 @@ function Dashboard() {
                                                                             const status = order.order.status;
                                                                             acc[getStatusText(status)] = (acc[getStatusText(status)] || 0) + 1;
                                                                             return acc;
-                                                                        }, {})).map(([status, count], index) => (
-                                                                            <Cell key={`cell-${index}`} fill={getStatusColor(status)} />
-                                                                        ))}
+                                                                        }, {})).map(([status, count], index) => {
+                                                                            // Mapeamento explícito de cores baseado no status
+                                                                            let color;
+                                                                            const translatedStatus = getStatusText(status);
+                                                                            switch (translatedStatus) {
+                                                                                case 'Recebido': color = '#FF9800'; break; // laranja
+                                                                                case 'Confirmado': color = '#4CAF50'; break; // verde
+                                                                                case 'Separação iniciada': color = '#FFEB3B'; break; // amarelo
+                                                                                case 'Separação finalizada': color = '#FFC107'; break; // âmbar
+                                                                                case 'Pronto para Retirada': color = '#FF5722'; break; // laranja escuro
+                                                                                case 'Despachado': color = '#2196F3'; break; // azul
+                                                                                case 'Chegou ao Destino': color = '#3F51B5'; break; // índigo
+                                                                                case 'Concluído': color = '#009688'; break; // verde-azulado
+                                                                                case 'Cancelado': color = '#F44336'; break; // vermelho
+                                                                                default: color = '#9E9E9E'; // cinza
+                                                                            }
+                                                                            return <Cell key={`cell-${index}`} fill={color} />;
+                                                                        })}
                                                                     </Pie>
-                                                                    <Tooltip />
+                                                                    <Tooltip
+                                                                        contentStyle={{
+                                                                            backgroundColor: 'white',
+                                                                            border: '1px solid #e0e0e0',
+                                                                            borderRadius: 8
+                                                                        }}
+                                                                        formatter={(value, name, props) => [`${value} pedidos`, name]}
+                                                                    />
                                                                 </PieChart>
                                                             </ResponsiveContainer>
                                                         </Box>
@@ -524,7 +546,7 @@ function Dashboard() {
                                             </Grid>
 
                                             {/* Opening Hours Card */}
-                                            <Grid item xs={12} md={4}>
+                                            <Grid item xs={12} md={3}>
                                                 <Card sx={{
                                                     height: '100%',
                                                     p: 2,
