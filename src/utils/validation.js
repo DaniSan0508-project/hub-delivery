@@ -1,18 +1,14 @@
 export const validateCnpj = (cnpj) => {
-  // Remove all non-digit characters
   const cleaned = cnpj.replace(/\D/g, '');
   
-  // Check if CNPJ has 14 digits
   if (cleaned.length !== 14) {
     return false;
   }
   
-  // Check for repeated digits (like 00000000000000)
   if (/^(\d)\1+$/.test(cleaned)) {
     return false;
   }
   
-  // Validate first check digit
   let sum = 0;
   let weight = 2;
   
@@ -28,7 +24,6 @@ export const validateCnpj = (cnpj) => {
     return false;
   }
   
-  // Validate second check digit
   sum = 0;
   weight = 2;
   

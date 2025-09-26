@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
-// Hook para gerenciar o status da loja
 export const useStoreStatus = () => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -18,7 +17,6 @@ export const useStoreStatus = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
-            // Verificar se o token expirou
             if (response.status === 401) {
                 localStorage.removeItem('authToken');
                 navigate('/', { state: { tokenExpired: true } });

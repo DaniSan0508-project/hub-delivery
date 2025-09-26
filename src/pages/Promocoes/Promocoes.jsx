@@ -74,15 +74,12 @@ function Promocoes() {
         staleTime: 1000 * 60 * 5, // 5 minutes
         cacheTime: 1000 * 60 * 10, // 10 minutes,
         onError: (error) => {
-            // Verificar se é um erro de token expirado
             if (error.message && error.message.includes('Sessão expirada')) {
-                // O serviço já lidou com o redirecionamento
                 return;
             }
         }
     });
 
-    // Calcular paginação no frontend
     const paginatedPromotions = promotionsData ?
         promotionsData.slice((page - 1) * rowsPerPage, page * rowsPerPage) : [];
 
@@ -97,9 +94,7 @@ function Promocoes() {
             setOpenDetailDialog(true);
         } catch (err) {
             console.error('Error fetching promotion details:', err);
-            // Verificar se é um erro de token expirado
             if (err.message && err.message.includes('Sessão expirada')) {
-                // O serviço já lidou com o redirecionamento
                 return;
             }
         }
@@ -356,7 +351,6 @@ function Promocoes() {
     );
 }
 
-// Componente separado para o formulário de criação de promoção
 function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
     const [formData, setFormData] = useState({
         promotionName: '',
@@ -409,7 +403,6 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
         setFormData(prev => ({
             ...prev,
             promotionType: value,
-            // Resetar campos específicos quando mudar o tipo
             discountValue: value === 'LXPY' ? '' : prev.discountValue,
             quantityToBuy: value === 'PERCENTAGE' ? '' : prev.quantityToBuy,
             quantityToPay: value !== 'LXPY' ? '' : prev.quantityToPay
@@ -421,7 +414,6 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
         setLoading(true);
         setError('');
 
-        // Validações
         if (!formData.promotionName) {
             setError('Nome da promoção é obrigatório');
             setLoading(false);
@@ -434,7 +426,6 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
             return;
         }
 
-        // Verificar se todos os produtos têm EAN preenchido
         if (products.some(product => !product.ean)) {
             setError('Todos os produtos devem ter o EAN preenchido');
             setLoading(false);
@@ -468,7 +459,6 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
         try {
             const token = localStorage.getItem('authToken');
 
-            // Montar os itens para cada produto
             const items = products.map(product => {
                 const item = {
                     ean: product.ean,
@@ -477,7 +467,6 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
                     promotionType: formData.promotionType
                 };
 
-                // Adicionar campos específicos de acordo com o tipo
                 if (formData.promotionType === 'PERCENTAGE') {
                     item.discountValue = parseFloat(formData.discountValue);
                 } else if (formData.promotionType === 'LXPY') {
@@ -509,7 +498,6 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
 
             await promotionService.createPromotion(promotionData, token);
             onPromotionCreated();
-            // Reset form
             setFormData({
                 promotionName: '',
                 channels: ['IFOOD-APP'],
@@ -524,9 +512,7 @@ function CreatePromotionDialog({ open, onClose, onPromotionCreated }) {
                 { ean: '', id: Date.now() }
             ]);
         } catch (err) {
-            // Verificar se é um erro de token expirado
             if (err.message && err.message.includes('Sessão expirada')) {
-                // O serviço já lidou com o redirecionamento
                 return;
             }
             setError(err.message || 'Erro ao criar promoção');

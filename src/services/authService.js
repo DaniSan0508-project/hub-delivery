@@ -1,6 +1,5 @@
 import api from './api';
 
-// Serviço para autenticação
 class AuthService {
     async login(cnpj, password, secretKey) {
         const loginData = {

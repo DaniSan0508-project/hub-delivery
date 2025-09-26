@@ -56,7 +56,6 @@ function Sincronizacao() {
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
 
-    // State for product sync functionality
     const [productsToSync, setProductsToSync] = useState([]);
     const [newProduct, setNewProduct] = useState({
         barcode: '',
@@ -66,7 +65,6 @@ function Sincronizacao() {
         status: true
     });
 
-    // State for Sync Produtos functionality
     const [syncProdutos, setSyncProdutos] = useState([]);
     const [loadingSyncProdutos, setLoadingSyncProdutos] = useState(false);
     const [errorSyncProdutos, setErrorSyncProdutos] = useState(null);
@@ -85,17 +83,14 @@ function Sincronizacao() {
     useEffect(() => {
         let isMounted = true;
 
-        // Check if user is logged in
         const token = localStorage.getItem('authToken');
         if (!token) {
             if (isMounted) {
                 navigate('/');
             }
         } else {
-            // In a real app, you might want to decode the token to get user info
             if (isMounted) {
                 setUser({ name: 'Usuário' });
-                // Adicionar um pequeno atraso para evitar corrida com outras chamadas
                 setTimeout(() => {
                     if (isMounted) {
                         fetchSyncData(token);
@@ -115,9 +110,7 @@ function Sincronizacao() {
             setError(null);
         } catch (error) {
             console.error('Error fetching sync data:', error);
-            // Verificar se é um erro de token expirado
             if (error.message && error.message.includes('Sessão expirada')) {
-                // O serviço já lidou com o redirecionamento
                 return;
             }
             setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
@@ -139,19 +132,15 @@ function Sincronizacao() {
         const { name, value } = e.target;
 
         if (name === 'value') { // 'value' é o seu campo de preço
-            // 1. Remove tudo que não for um dígito
             const onlyDigits = value.replace(/\D/g, '');
 
-            // Se o campo ficar vazio, limpa o estado
             if (onlyDigits === '') {
                 setNewProduct({ ...newProduct, [name]: '' });
                 return;
             }
 
-            // 2. Converte a string de dígitos para um número e divide por 100
             const numericValue = parseInt(onlyDigits, 10) / 100;
 
-            // 3. Formata o número para o padrão de moeda do Brasil (pt-BR)
             const formattedValue = numericValue.toLocaleString('pt-BR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -163,14 +152,12 @@ function Sincronizacao() {
             });
 
         } else if (name === 'stock') {
-            // Lógica para o estoque (continua a mesma)
             const stockValue = parseInt(value, 10);
             setNewProduct({
                 ...newProduct,
                 [name]: isNaN(stockValue) ? '' : stockValue,
             });
         } else {
-            // Para todos os outros campos (barcode, name, etc.)
             setNewProduct({
                 ...newProduct,
                 [name]: value
@@ -178,14 +165,12 @@ function Sincronizacao() {
         }
     };
 
-    // Add product to sync list
     const handleAddProduct = () => {
         if (!newProduct.barcode || !newProduct.name || !newProduct.value || !newProduct.stock) {
             setError('Por favor, preencha todos os campos obrigatórios.');
             return;
         }
 
-        // Use a função de ajuda para converter "100,25" (string) para 100.25 (número)
         const priceAsNumber = unformatCurrency(newProduct.value);
 
         const product = {
@@ -197,7 +182,6 @@ function Sincronizacao() {
 
         setProductsToSync([...productsToSync, product]);
 
-        // Resetar o formulário
         setNewProduct({
             barcode: '',
             name: '',
@@ -210,25 +194,20 @@ function Sincronizacao() {
         setTimeout(() => setSuccessMessage(null), 3000);
     };
 
-    // Lembre-se de ter esta função no seu componente
     const unformatCurrency = (value) => {
         if (typeof value !== 'string') {
             return 0;
         }
-        // Remove os pontos de milhar e substitui a vírgula por ponto
         const normalizedValue = value.replace(/\./g, '').replace(',', '.');
-        // Usa parseFloat para manter as casas decimais
         return parseFloat(normalizedValue) || 0;
     };
 
-    // Remove product from sync list
     const handleRemoveProduct = (index) => {
         const updatedProducts = [...productsToSync];
         updatedProducts.splice(index, 1);
         setProductsToSync(updatedProducts);
     };
 
-    // Send products to sync endpoint
     const handleSyncProducts = async () => {
         if (productsToSync.length === 0) {
             setError('Adicione pelo menos um produto para sincronizar.');
@@ -244,13 +223,10 @@ function Sincronizacao() {
 
             setSuccessMessage(`Produtos sincronizados com sucesso! ${productsToSync.length} produtos enviados.`);
             setProductsToSync([]);
-            // Refresh sync data
             fetchSyncData(token);
         } catch (error) {
             console.error('Error syncing products:', error);
-            // Verificar se é um erro de token expirado
             if (error.message && error.message.includes('Sessão expirada')) {
-                // O serviço já lidou com o redirecionamento
                 return;
             }
             setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
@@ -259,7 +235,6 @@ function Sincronizacao() {
         }
     };
 
-    // Fetch Sync Produtos with pagination and filtering
     const fetchSyncProdutos = async (page = 1) => {
         try {
             setLoadingSyncProdutos(true);
@@ -271,22 +246,18 @@ function Sincronizacao() {
                 per_page: 10
             });
 
-            // Add name filter if exists
             if (searchName) {
                 params.append('name', searchName);
             }
 
-            // Add barcode filter if exists
             if (searchBarcode) {
                 params.append('barcode', searchBarcode);
             }
 
-            // Add value filter if exists
             if (searchValue) {
                 params.append('value', searchValue);
             }
 
-            // Add date range filters if exists
             if (dateFilterStart) {
                 params.append('created_at_start', dateFilterStart);
             }
@@ -294,16 +265,13 @@ function Sincronizacao() {
                 params.append('created_at_end', dateFilterEnd);
             }
 
-            // Add status filter if not 'all'
             if (filterStatus !== 'all') {
-                // Convert status to 1/0 format as required
                 params.append('status', filterStatus === 'active' ? '1' : '0');
             }
 
             console.log('Making request to:', `http://localhost:8090/api/hub/local/items?${params}`);
             console.log('Token:', token);
 
-            // Using the same base URL pattern as other services in the application
             const response = await fetch(`http://localhost:8090/api/hub/local/items?${params}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -320,7 +288,6 @@ function Sincronizacao() {
             const data = await response.json();
             console.log('Full API response:', data);
 
-            // API returns structure like: { data: [...], pagination: { current_page, total_pages, total, ... } }
             console.log('Products data:', data.data);
             console.log('Pagination data:', data.pagination);
 
@@ -336,40 +303,33 @@ function Sincronizacao() {
         }
     };
 
-    // Handle opening the sync produtos modal
     const handleOpenSyncProdutosModal = () => {
         setCurrentPage(1); // Reset to first page when opening
         fetchSyncProdutos(1);
         setOpenSyncProdutosModal(true);
     };
 
-    // Handle closing the sync produtos modal
     const handleCloseSyncProdutosModal = () => {
         setOpenSyncProdutosModal(false);
     };
 
-    // Handle page change for sync produtos
     const handlePageChange = (newPage) => {
         setCurrentPage(newPage);
         fetchSyncProdutos(newPage);
     };
 
-    // Handle name search for sync produtos
     const handleSearchNameChange = (e) => {
         setSearchName(e.target.value);
     };
 
-    // Handle barcode search for sync produtos
     const handleSearchBarcodeChange = (e) => {
         setSearchBarcode(e.target.value);
     };
 
-    // Handle status filter change for sync produtos
     const handleFilterStatusChange = (e) => {
         setFilterStatus(e.target.value);
     };
 
-    // Handle search submission for sync produtos
     const handleSearchSubmit = () => {
         setCurrentPage(1); // Reset to first page when searching
         fetchSyncProdutos(1);

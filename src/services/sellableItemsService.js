@@ -1,6 +1,5 @@
 import api from './api';
 
-// Serviço para itens vendáveis do iFood
 class SellableItemsService {
     async getSellableItems(token) {
         try {

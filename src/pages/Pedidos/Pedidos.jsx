@@ -62,7 +62,6 @@ import OrderDetailsModal from '../../components/OrderDetailsModal';
 
 const drawerWidth = 240;
 
-// Componente para exibir informações de pagamento
 const PaymentBadge = ({ payment }) => {
     if (!payment) return null;
 
@@ -126,7 +125,6 @@ const CashChangeInfo = ({ payment }) => {
     );
 };
 
-// Componente para identificar pedidos agendados
 const ScheduledOrderBadge = ({ order }) => {
     if (!order.is_scheduled) return null;
 
@@ -142,7 +140,6 @@ const ScheduledOrderBadge = ({ order }) => {
     );
 };
 
-// Função para formatar hora de forma amigável
 const formatTime = (dateTimeStr) => {
     if (!dateTimeStr) return 'N/A';
     const date = new Date(dateTimeStr);
@@ -153,7 +150,6 @@ const formatTime = (dateTimeStr) => {
     });
 };
 
-// Função para calcular tempo restante
 const getTimeStatus = (order) => {
     if (!order?.preparation_start_time || !order?.delivery_window?.start) return 'Horário não definido';
 
@@ -171,7 +167,6 @@ const getTimeStatus = (order) => {
     }
 };
 
-// Função auxiliar para calcular progresso
 const calculateProgress = (order) => {
     if (!order?.preparation_start_time || !order?.delivery_window?.end) return 0;
 
@@ -198,11 +193,9 @@ const getProgressLabel = (order) => {
     return "Janela de entrega encerrada";
 };
 
-// Componente para exibir as janelas de tempo de forma amigável
 const TimeWindowDisplay = ({ order }) => {
     if (!order.is_scheduled) return null;
 
-    // Alerta para quando o tempo de preparo já deveria ter começado
     const showUrgentAlert = order.preparation_start_time &&
         new Date() > new Date(order.preparation_start_time);
 
@@ -282,14 +275,11 @@ function Pedidos() {
     const [orderDetailsModal, setOrderDetailsModal] = useState({ open: false, orderId: null });
     const [completedActions, setCompletedActions] = useState(new Set()); // Track completed actions
 
-    // Snackbar states
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
-    // Pagination states
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    // Filter states
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [paymentFilter, setPaymentFilter] = useState('all'); // Novo filtro para pagamento
@@ -300,15 +290,12 @@ function Pedidos() {
     const [sortBy, setSortBy] = useState('createdAt'); // Default sort by creation date
     const [sortOrder, setSortOrder] = useState('desc'); // Default descending (newest first)
 
-    // Polling state
     const [isPolling, setIsPolling] = useState(true);
 
-    // Track notified orders to avoid duplicate notifications
     const [notifiedOrders, setNotifiedOrders] = useState(new Set());
 
     const fetchOrders = useCallback(async (token, isPolling = false) => {
         try {
-            // Only set loading state for manual refresh, not for polling
             if (!isPolling) {
                 setLoading(true);
             }
@@ -318,14 +305,12 @@ function Pedidos() {
             const ordersData = await orderService.getOrders(token);
             console.log('Received orders data:', ordersData);
 
-            // Verificar se ordersData existe
             if (!ordersData) {
                 console.error('No orders data received');
                 setOrders([]);
                 return;
             }
 
-            // Verificar se ordersData.data existe (nova estrutura da API)
             const ordersArray = ordersData.data || ordersData.orders || [];
             if (!Array.isArray(ordersArray)) {
                 console.error('Invalid orders data structure:', ordersData);
@@ -335,28 +320,20 @@ function Pedidos() {
 
             console.log('Number of orders received:', ordersArray.length);
 
-            // Verificar se há novos pedidos para mostrar notificação (apenas durante polling)
             if (isPolling) {
                 const currentOrderIds = new Set(orders.map(order => order.id));
                 const newOrders = ordersArray.filter(order => {
-                    // Verificar se a estrutura do pedido é válida
                     if (!order || !order.order || !order.consumer) {
                         return false;
                     }
-                    // Verificar se é um pedido novo (não existia antes)
                     const isNewOrder = !currentOrderIds.has(order.order.id);
-                    // Verificar se o pedido está com status "Confirmado" (Placed)
                     const isPlacedOrder = order.order.status === 'Placed';
-                    // Verificar se já foi notificado
                     const isAlreadyNotified = notifiedOrders.has(order.order.id);
 
-                    // Só notificar se é um novo pedido confirmado que ainda não foi notificado
                     return isNewOrder && isPlacedOrder && !isAlreadyNotified;
                 });
 
-                // Mostrar notificação para novos pedidos confirmados
                 if (newOrders.length > 0) {
-                    // Adicionar os novos pedidos ao conjunto de pedidos notificados
                     setNotifiedOrders(prev => {
                         const updated = new Set(prev);
                         newOrders.forEach(order => updated.add(order.order.id));
@@ -371,17 +348,14 @@ function Pedidos() {
                 }
             }
 
-            // Transform the API response to match our table structure
             const transformedOrders = ordersArray.map((order, index) => {
                 console.log(`Processing order ${index}:`, order);
 
-                // Verificar se a estrutura do pedido é válida
                 if (!order || !order.order || !order.consumer) {
                     console.error(`Invalid order structure at index ${index}:`, order);
                     return null;
                 }
 
-                // Verificar se order.order.items existe
                 const items = order.order.items || [];
                 return {
                     id: order.order.id,
@@ -390,9 +364,7 @@ function Pedidos() {
                     total: items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0),
                     createdAt: order.order.created_at || 'Horário não disponível', // Usar horário retornado pela API
                     delivery_provider: order.order.delivery_provider,
-                    // Manter as informações de pagamento
                     payment: order.order.payment,
-                    // Adicionar informações de agendamento
                     is_scheduled: order.order.is_scheduled,
                     scheduling_type: order.order.scheduling_type,
                     delivery_window: order.order.delivery_window,
@@ -406,22 +378,17 @@ function Pedidos() {
 
             console.log('Transformed orders:', transformedOrders);
 
-            // Sort orders by creation date (newest first)
             const sortedOrders = [...transformedOrders].sort((a, b) => {
-                // If createdAt is not available, we can't sort properly, so keep original order
                 if (!a.createdAt || !b.createdAt) return 0;
 
-                // Convert to Date objects for comparison
                 const dateA = new Date(a.createdAt);
                 const dateB = new Date(b.createdAt);
 
-                // Sort descending (newest first)
                 return dateB - dateA;
             });
 
             setOrders(sortedOrders);
 
-            // Clear completed actions for orders that are no longer in the "Dispatched" status
             setCompletedActions(prev => {
                 const updated = new Set(prev);
                 transformedOrders.forEach(order => {
@@ -432,7 +399,6 @@ function Pedidos() {
                 return updated;
             });
 
-            // Limpar notifiedOrders para pedidos que não estão mais na lista (para evitar acumulo de IDs)
             setNotifiedOrders(prev => {
                 const updated = new Set(prev);
                 const transformedOrderIds = new Set(transformedOrders.map(order => order.id));
@@ -445,16 +411,12 @@ function Pedidos() {
             });
         } catch (error) {
             console.error('Error fetching orders:', error);
-            // Verificar se é um erro de token expirado
             if (error.message && error.message.includes('Sessão expirada')) {
-                // O serviço já lidou com o redirecionamento
                 return;
             }
 
-            // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
-                // Mapear mensagens de erro comuns para mensagens mais amigáveis
                 if (error.message.includes('Network Error')) {
                     errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
                 } else if (error.message.includes('401')) {
@@ -470,7 +432,6 @@ function Pedidos() {
 
             setError(errorMessage);
         } finally {
-            // Only set loading to false for manual refresh, not for polling
             if (!isPolling) {
                 setLoading(false);
             }
@@ -481,24 +442,20 @@ function Pedidos() {
         let isMounted = true;
         let pollingInterval;
 
-        // Check if user is logged in
         const token = localStorage.getItem('authToken');
         if (!token) {
             if (isMounted) {
                 navigate('/');
             }
         } else {
-            // In a real app, you might want to decode the token to get user info
             if (isMounted) {
                 setUser({ name: 'Usuário' });
-                // Adicionar um pequeno atraso para evitar corrida com outras chamadas
                 setTimeout(() => {
                     if (isMounted) {
                         fetchOrders(token);
                     }
                 }, 150);
 
-                // Iniciar polling a cada 10 segundos se estiver habilitado
                 if (isPolling) {
                     pollingInterval = setInterval(() => {
                         if (isMounted) {
@@ -549,57 +506,42 @@ function Pedidos() {
         setPage(0); // Reset to first page when sorting
     };
 
-    // Filter and sort orders based on search term, status filter, and sorting
     const filteredAndSortedOrders = orders
         .filter(order => {
-            // Apply search filter
             if (searchTerm) {
                 const term = searchTerm.toLowerCase();
-                // Search in order ID (both full ID and shortened version)
                 const orderIdMatch = order.id.toLowerCase().includes(term) ||
                     `#${order.id.substring(0, 8)}`.toLowerCase().includes(term);
-                // Search in customer name
                 const customerMatch = order.customer.toLowerCase().includes(term);
-                // Search in total amount (convert to string and format)
                 const totalMatch = `R$ ${parseFloat(order.total).toFixed(2).replace('.', ',')}`.includes(term);
 
-                // Return true if any of the fields match
                 if (!orderIdMatch && !customerMatch && !totalMatch) {
                     return false;
                 }
             }
 
-            // Apply status filter
             if (statusFilter !== 'all') {
                 if (statusFilter === 'waitingWebhook') {
-                    // Special filter for orders waiting for webhook
                     return order.status === 'Dispatched' && completedActions.has(order.id);
                 } else if (statusFilter === 'Concluded') {
                     return order.status === 'Concluded';
                 } else if (statusFilter === 'RFI') {
-                    // Tratar RFI da mesma forma que READY_TO_PICKUP
                     return order.status === 'READY_TO_PICKUP' || order.status === 'Ready to Pickup' || order.status === 'RFI';
                 } else if (statusFilter === 'Cancelled') {
-                    // Tratar Cancelled e CAR da mesma forma
                     return order.status === 'Cancelled' || order.status === 'CAR';
                 } else if (statusFilter === 'SPS') {
-                    // Handle both SPS and Separation Started
                     return order.status === 'SPS' || order.status === 'Separation Started';
                 } else if (statusFilter === 'SPE') {
-                    // Handle both SPE and Separation Ended
                     return order.status === 'SPE' || order.status === 'Separation Ended';
                 } else if (statusFilter === 'READY_TO_PICKUP') {
-                    // Handle READY_TO_PICKUP and Ready to Pickup
                     return order.status === 'READY_TO_PICKUP' || order.status === 'Ready to Pickup';
                 } else if (statusFilter === 'Arrived') {
-                    // Handle both Arrived and Arrived at Destination
                     return order.status === 'Arrived' || order.status === 'Arrived at Destination';
                 } else {
                     return order.status === statusFilter;
                 }
             }
 
-            // Apply payment filter
             if (paymentFilter !== 'all' && order.payment) {
                 switch (paymentFilter) {
                     case 'online':
@@ -617,7 +559,6 @@ function Pedidos() {
                 }
             }
 
-            // Apply order type filter
             if (orderTypeFilter !== 'all') {
                 if (orderTypeFilter === 'scheduled') {
                     return order.is_scheduled === true;
@@ -628,31 +569,22 @@ function Pedidos() {
                 }
             }
 
-            // Apply date filter
             if (dateFilterStart || dateFilterEnd) {
-                // Convert order's createdAt to a proper Date object
                 let orderDate;
                 if (order.createdAt) {
-                    // Check if it's already a Date object or needs parsing
                     if (order.createdAt instanceof Date) {
                         orderDate = order.createdAt;
                     } else {
-                        // Parse the string format from the API: "2025-09-25 18:47:41"
                         orderDate = new Date(order.createdAt.replace(' ', 'T'));
                     }
                 } else {
-                    // If no createdAt date, we can't filter, so include the order
-                    // (Or we could exclude it if we want strict filtering)
                     return true;
                 }
 
-                // Ensure valid date
                 if (isNaN(orderDate.getTime())) {
-                    // Invalid date, we can't filter this order by date, so include it
                     return true;
                 }
 
-                // Apply start date filter
                 if (dateFilterStart) {
                     const startDate = new Date(dateFilterStart);
                     if (orderDate < startDate) {
@@ -660,10 +592,8 @@ function Pedidos() {
                     }
                 }
 
-                // Apply end date filter
                 if (dateFilterEnd) {
                     const endDate = new Date(dateFilterEnd);
-                    // Add one day to include orders from the entire end date
                     endDate.setDate(endDate.getDate() + 1);
                     if (orderDate >= endDate) {
                         return false;
@@ -674,7 +604,6 @@ function Pedidos() {
             return true;
         })
         .sort((a, b) => {
-            // Apply sorting
             let aValue, bValue;
 
             switch (sortBy) {
@@ -701,55 +630,44 @@ function Pedidos() {
                     break;
             }
 
-            // Handle numeric comparisons
             if (typeof aValue === 'number' && typeof bValue === 'number') {
                 return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
             }
 
-            // Handle string comparisons
             if (typeof aValue === 'string' && typeof bValue === 'string') {
                 const comparison = aValue.localeCompare(bValue);
                 return sortOrder === 'asc' ? comparison : -comparison;
             }
 
-            // Ordenação padrão por data de criação (mais recente primeiro)
-            // Se não tivermos datas, ordenar por ID (mais recente primeiro)
             if (!a.createdAt && !b.createdAt) {
                 return b.id.localeCompare(a.id); // Comparar IDs se não tiver datas
             }
 
-            // Se só um tiver data, colocar o que tem data primeiro
             if (!a.createdAt) return 1;
             if (!b.createdAt) return -1;
 
-            // Se ambos tiverem datas, ordenar por data (mais recente primeiro)
             const dateA = new Date(a.createdAt);
             const dateB = new Date(b.createdAt);
             return dateB - dateA;
         });
 
-    // Função para ordenar pedidos agendados
     const sortScheduledOrders = (ordersList) => {
         return [...ordersList].sort((a, b) => {
-            // Priorizar pedidos agendados em relação aos imediatos
             if (a.is_scheduled && !b.is_scheduled) return -1;
             if (!a.is_scheduled && b.is_scheduled) return 1;
 
-            // Se ambos forem agendados, ordenar por horário de preparo
             if (a.is_scheduled && b.is_scheduled) {
                 const prepA = new Date(a.preparation_start_time);
                 const prepB = new Date(b.preparation_start_time);
                 return prepA - prepB;
             }
 
-            // Caso contrário, manter a ordenação original (por data de criação)
             const dateA = new Date(a.createdAt);
             const dateB = new Date(b.createdAt);
             return dateB - dateA;
         });
     };
 
-    // Usar ordenação específica para pedidos agendados
     const orderedOrders = orderTypeFilter === 'scheduled' ? sortScheduledOrders(filteredAndSortedOrders) : filteredAndSortedOrders;
 
 
@@ -758,10 +676,8 @@ function Pedidos() {
         try {
             const token = localStorage.getItem('authToken');
             await orderService.confirmOrder(orderId, token);
-            // Refresh orders after confirming
             fetchOrders(token);
 
-            // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
                 message: 'Pedido confirmado com sucesso!',
@@ -770,10 +686,8 @@ function Pedidos() {
         } catch (error) {
             console.error('Error confirming order:', error);
 
-            // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
-                // Mapear mensagens de erro comuns para mensagens mais amigáveis
                 if (error.message.includes('Network Error')) {
                     errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
                 } else if (error.message.includes('401')) {
@@ -787,7 +701,6 @@ function Pedidos() {
                 }
             }
 
-            // Mostrar notificação de erro
             setSnackbar({
                 open: true,
                 message: errorMessage,
@@ -800,10 +713,8 @@ function Pedidos() {
         try {
             const token = localStorage.getItem('authToken');
             await orderService.dispatchOrder(orderId, token);
-            // Refresh orders after dispatch
             fetchOrders(token);
 
-            // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
                 message: 'Pedido despachado com sucesso!',
@@ -812,10 +723,8 @@ function Pedidos() {
         } catch (error) {
             console.error('Error dispatching order:', error);
 
-            // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
-                // Mapear mensagens de erro comuns para mensagens mais amigáveis
                 if (error.message.includes('Network Error')) {
                     errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
                 } else if (error.message.includes('401')) {
@@ -829,7 +738,6 @@ function Pedidos() {
                 }
             }
 
-            // Mostrar notificação de erro
             setSnackbar({
                 open: true,
                 message: errorMessage,
@@ -842,10 +750,8 @@ function Pedidos() {
         try {
             const token = localStorage.getItem('authToken');
             await orderService.dispatchOrderToIfood(orderId, token);
-            // Refresh orders after dispatching to iFood
             fetchOrders(token);
 
-            // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
                 message: 'Pedido despachado para o iFood com sucesso!',
@@ -854,10 +760,8 @@ function Pedidos() {
         } catch (error) {
             console.error('Error dispatching order to iFood:', error);
 
-            // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
-                // Mapear mensagens de erro comuns para mensagens mais amigáveis
                 if (error.message.includes('Network Error')) {
                     errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
                 } else if (error.message.includes('401')) {
@@ -871,7 +775,6 @@ function Pedidos() {
                 }
             }
 
-            // Mostrar notificação de erro
             setSnackbar({
                 open: true,
                 message: errorMessage,
@@ -884,10 +787,8 @@ function Pedidos() {
         try {
             const token = localStorage.getItem('authToken');
             await orderService.endSeparation(orderId, token);
-            // Refresh orders after ending separation
             fetchOrders(token);
 
-            // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
                 message: 'Separação finalizada com sucesso!',
@@ -896,10 +797,8 @@ function Pedidos() {
         } catch (error) {
             console.error('Error ending separation:', error);
 
-            // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
-                // Mapear mensagens de erro comuns para mensagens mais amigáveis
                 if (error.message.includes('Network Error')) {
                     errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
                 } else if (error.message.includes('401')) {
@@ -913,7 +812,6 @@ function Pedidos() {
                 }
             }
 
-            // Mostrar notificação de erro
             setSnackbar({
                 open: true,
                 message: errorMessage,
@@ -926,10 +824,8 @@ function Pedidos() {
         try {
             const token = localStorage.getItem('authToken');
             await orderService.startSeparation(orderId, token);
-            // Refresh orders after starting separation
             fetchOrders(token);
 
-            // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
                 message: 'Separação iniciada com sucesso!',
@@ -938,10 +834,8 @@ function Pedidos() {
         } catch (error) {
             console.error('Error starting separation:', error);
 
-            // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
-                // Mapear mensagens de erro comuns para mensagens mais amigáveis
                 if (error.message.includes('Network Error')) {
                     errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
                 } else if (error.message.includes('401')) {
@@ -955,7 +849,6 @@ function Pedidos() {
                 }
             }
 
-            // Mostrar notificação de erro
             setSnackbar({
                 open: true,
                 message: errorMessage,
@@ -968,10 +861,8 @@ function Pedidos() {
         try {
             const token = localStorage.getItem('authToken');
             await orderService.requestIfoodDriver(orderId, token);
-            // Refresh orders after requesting iFood driver
             fetchOrders(token);
 
-            // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
                 message: 'Solicitação de entregador iFood enviada com sucesso!',
@@ -980,20 +871,16 @@ function Pedidos() {
         } catch (error) {
             console.error('Error requesting iFood driver:', error);
 
-            // Tratar mensagens de erro mais comuns
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
 
             if (error.message) {
-                // Verificar se é um erro do iFood com detalhes
                 if (error.message.includes('Failed to request iFood driver')) {
-                    // Tentar extrair a mensagem de erro detalhada
                     try {
                         const errorDetails = JSON.parse(error.message.replace('Failed to request iFood driver.', '').trim());
                         if (errorDetails.message) {
                             errorMessage = errorDetails.message;
                         }
                     } catch {
-                        // Se não conseguir parsear, usar a mensagem original
                         errorMessage = 'Erro ao solicitar entregador iFood. Por favor, tente novamente.';
                     }
                 } else {
@@ -1001,7 +888,6 @@ function Pedidos() {
                 }
             }
 
-            // Mostrar notificação de erro
             setSnackbar({
                 open: true,
                 message: errorMessage,
@@ -1014,10 +900,8 @@ function Pedidos() {
         try {
             const token = localStorage.getItem('authToken');
             await orderService.cancelOrder(orderId, token);
-            // Refresh orders after canceling
             fetchOrders(token);
 
-            // Mostrar notificação de sucesso
             setSnackbar({
                 open: true,
                 message: 'Pedido cancelado com sucesso!',
@@ -1026,10 +910,8 @@ function Pedidos() {
         } catch (error) {
             console.error('Error canceling order:', error);
 
-            // Tratamento de erro mais amigável
             let errorMessage = 'Erro de conexão. Por favor, tente novamente.';
             if (error.message) {
-                // Mapear mensagens de erro comuns para mensagens mais amigáveis
                 if (error.message.includes('Network Error')) {
                     errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
                 } else if (error.message.includes('401')) {
@@ -1043,7 +925,6 @@ function Pedidos() {
                 }
             }
 
-            // Mostrar notificação de erro
             setSnackbar({
                 open: true,
                 message: errorMessage,
@@ -1111,7 +992,6 @@ function Pedidos() {
     };
 
     const getStatusColor = (status, orderId) => {
-        // Check if this order is waiting for webhook update
         const isWaitingWebhook = status === 'Dispatched' && completedActions.has(orderId);
         if (isWaitingWebhook) {
             return '#2196f3'; // Azul para aguardando webhook
@@ -1152,7 +1032,6 @@ function Pedidos() {
     };
 
     const getStatusText = (status, orderId) => {
-        // Check if this order is waiting for webhook update
         const isWaitingWebhook = status === 'Dispatched' && completedActions.has(orderId);
         if (isWaitingWebhook) {
             return 'Aguardando atualização do iFood';
@@ -1195,17 +1074,13 @@ function Pedidos() {
     const getAvailableActions = (order) => {
         const { status, delivery_provider } = order;
 
-        // Verificar se é um pedido com status de cancelamento
         if (status === 'CANCELLATION_REQUESTED' || status === 'Cancelled' || status === 'CAR') {
-            // Não mostrar ações para pedidos em processo de cancelamento ou já cancelados
             return [];
         }
 
-        // Verificar se é um pedido TAKEOUT
         const isTakeout = delivery_provider === 'TAKEOUT';
 
         if (isTakeout) {
-            // Fluxo para pedidos TAKEOUT: Confirm → Start Separation → End Separation
             switch (status) {
                 case 'Placed':
                     return [
@@ -1227,7 +1102,6 @@ function Pedidos() {
                     return [];
             }
         } else {
-            // Fluxo para pedidos não TAKEOUT: Confirm → Start Separation → Dispatch
             switch (status) {
                 case 'Placed':
                     return [
@@ -1246,7 +1120,6 @@ function Pedidos() {
                         { action: 'cancel', label: 'Cancelar Pedido', color: '#f44336', icon: <StopIcon /> } // Vermelho
                     ];
                 case 'Dispatched':
-                    // Para pedidos não TAKEOUT, não mostramos a opção "Chegou ao Destino"
                     return [];
                 default:
                     return [];
@@ -1331,7 +1204,6 @@ function Pedidos() {
                             <Button
                                 variant="contained"
                                 onClick={() => {
-                                    // Clear filters when refreshing
                                     setSearchTerm('');
                                     setStatusFilter('all');
                                     setPage(0);

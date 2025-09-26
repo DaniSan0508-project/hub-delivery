@@ -1,6 +1,5 @@
 import api from './api';
 
-// Serviço para catálogos e itens
 class CatalogService {
     async getCatalogs(token) {
         console.log('CatalogService.getCatalogs called with token:', token);

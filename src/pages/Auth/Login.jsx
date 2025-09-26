@@ -39,14 +39,11 @@ function Login() {
     const location = useLocation()
 
     useEffect(() => {
-        // Verificar se veio de um redirecionamento por token expirado
         if (location.state?.tokenExpired) {
             setShowTokenExpiredMessage(true)
-            // Limpar o state após mostrar a mensagem
             window.history.replaceState({}, document.title)
         }
 
-        // Limpar token expirado do localStorage se existir
         if (localStorage.getItem('authToken')) {
             localStorage.removeItem('authToken')
         }
@@ -56,14 +53,12 @@ function Login() {
         e.preventDefault()
         setLoginError('')
 
-        // Validate CNPJ before submitting
         const cleanCnpj = cnpj.replace(/\D/g, '')
         if (!validateCnpj(cleanCnpj)) {
             setCnpjError('CNPJ inválido')
             return
         }
 
-        // Validate secret key
         if (!secretKey) {
             setLoginError('Por favor, informe a chave secreta')
             return
@@ -75,12 +70,9 @@ function Login() {
         try {
             const data = await authService.login(cleanCnpj, password, secretKey)
 
-            // Save token to localStorage
             localStorage.setItem('authToken', data.token)
 
-            // Small delay to ensure token is saved before navigation
             setTimeout(() => {
-                // Navigate to dashboard
                 navigate('/dashboard')
             }, 100)
         } catch (error) {
@@ -104,7 +96,6 @@ function Login() {
 
         setCnpj(formattedValue)
 
-        // Clear error when user starts typing
         if (cnpjError) {
             setCnpjError('')
         }

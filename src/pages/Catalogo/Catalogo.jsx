@@ -54,17 +54,14 @@ function Catalogo() {
   useEffect(() => {
     let isMounted = true;
     
-    // Check if user is logged in
     const token = localStorage.getItem('authToken');
     if (!token) {
       if (isMounted) {
         navigate('/');
       }
     } else {
-      // In a real app, you might want to decode the token to get user info
       if (isMounted) {
         setUser({ name: 'Usuário' });
-        // Adicionar um pequeno atraso para evitar corrida com outras chamadas
         setTimeout(() => {
           if (isMounted) {
             fetchCatalogs(token);
@@ -89,7 +86,6 @@ function Catalogo() {
       if (catalogsData && catalogsData.data && catalogsData.data.catalogs) {
         setCatalogs(catalogsData.data.catalogs);
         
-        // Selecionar o primeiro catálogo disponível por padrão
         if (catalogsData.data.catalogs.length > 0) {
           const firstCatalog = catalogsData.data.catalogs[0];
           setSelectedCatalog(firstCatalog);
@@ -98,9 +94,7 @@ function Catalogo() {
       }
     } catch (error) {
       console.error('Error fetching catalogs:', error);
-      // Verificar se é um erro de token expirado
       if (error.message && error.message.includes('Sessão expirada')) {
-        // O serviço já lidou com o redirecionamento
         return;
       }
       setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
@@ -126,9 +120,7 @@ function Catalogo() {
       setPage(1); // Reset to first page when changing catalogs
     } catch (error) {
       console.error('Error fetching catalog items:', error);
-      // Verificar se é um erro de token expirado
       if (error.message && error.message.includes('Sessão expirada')) {
-        // O serviço já lidou com o redirecionamento
         return;
       }
       setError(error.message || 'Erro de conexão. Por favor, tente novamente.');
@@ -165,7 +157,6 @@ function Catalogo() {
     navigate('/');
   };
 
-  // Paginação dos itens
   const indexOfLastItem = page * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = catalogItems.slice(indexOfFirstItem, indexOfLastItem);

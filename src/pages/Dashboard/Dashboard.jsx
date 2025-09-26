@@ -509,7 +509,6 @@ function Dashboard() {
                                                                             acc[getStatusText(status)] = (acc[getStatusText(status)] || 0) + 1;
                                                                             return acc;
                                                                         }, {})).map(([status, count], index) => {
-                                                                            // Mapeamento explícito de cores baseado no status
                                                                             let color;
                                                                             const translatedStatus = getStatusText(status);
                                                                             switch (translatedStatus) {

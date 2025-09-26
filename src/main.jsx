@@ -31,7 +31,6 @@ const theme = createTheme({
   },
 })
 
-// Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

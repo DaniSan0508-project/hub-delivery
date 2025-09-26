@@ -29,7 +29,6 @@ function App() {
         e.preventDefault()
         setLoginError('')
 
-        // Validate CNPJ before submitting
         const cleanCnpj = cnpj.replace(/\D/g, '')
         if (!validateCnpj(cleanCnpj)) {
             setCnpjError('CNPJ inválido')
@@ -62,11 +61,8 @@ function App() {
             const data = await response.json()
 
             if (response.ok) {
-                // Save token to localStorage
                 localStorage.setItem('authToken', data.token)
-                // Small delay to ensure token is saved before navigation
                 setTimeout(() => {
-                    // Navigate to dashboard
                     navigate('/dashboard')
                 }, 100)
             } else {
@@ -93,7 +89,6 @@ function App() {
 
         setCnpj(formattedValue)
 
-        // Clear error when user starts typing
         if (cnpjError) {
             setCnpjError('')
         }

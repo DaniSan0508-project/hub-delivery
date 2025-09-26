@@ -1,6 +1,5 @@
 import api from './api';
 
-// Serviço para loja
 class StoreService {
     async getMerchantStatus(token) {
         return await api.get(`${api.baseHubUrl}/merchant/status`, token);

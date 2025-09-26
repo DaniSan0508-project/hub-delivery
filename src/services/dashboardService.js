@@ -1,6 +1,5 @@
 import api from './api';
 
-// Serviço para dashboard
 class DashboardService {
     async getMerchantData(token) {
         return await api.get(`${api.baseHubUrl}/merchant`, token);

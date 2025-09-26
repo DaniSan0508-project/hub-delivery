@@ -1,11 +1,9 @@
-// Serviço base para chamadas à API
 class ApiService {
     constructor() {
         this.baseERPUrl = 'http://localhost:8090/api/erp';
         this.baseHubUrl = 'http://localhost:8090/api/hub/ifood';
     }
 
-    // Método para obter headers de autenticação
     getAuthHeaders(token) {
         const headers = {
             'Authorization': `Bearer ${token}`,
@@ -16,7 +14,6 @@ class ApiService {
         return headers;
     }
 
-    // Método genérico para chamadas GET
     async get(url, token = null) {
         const headers = token ? this.getAuthHeaders(token) : {};
         
@@ -25,7 +22,6 @@ class ApiService {
             headers
         });
         
-        // Verificar se o token expirou
         if (response.status === 401) {
             this.handleTokenExpiration();
             throw new Error('Sessão expirada. Faça login novamente.');
@@ -39,7 +35,6 @@ class ApiService {
         return await response.json();
     }
 
-    // Método genérico para chamadas POST
     async post(url, data, token = null) {
         const headers = token ? { ...this.getAuthHeaders(token) } : {
             'Content-Type': 'application/json',
@@ -60,14 +55,12 @@ class ApiService {
         console.log('Response headers:', [...response.headers.entries()]);
         console.log('Response redirect url (if any):', response.redirected ? response.url : 'Not redirected');
         
-        // Verificar se houve redirecionamento (possível token expirado)
         if (response.redirected && response.url.includes('login')) {
             console.log('Request was redirected to login page - token may be expired');
             this.handleTokenExpiration();
             throw new Error('Sessão expirada. Faça login novamente.');
         }
         
-        // Verificar se o token expirou
         if (response.status === 401) {
             console.log('Received 401 Unauthorized - token may be invalid or expired');
             this.handleTokenExpiration();
@@ -75,7 +68,6 @@ class ApiService {
         }
         
         if (!response.ok) {
-            // Tentar obter a mensagem de erro da resposta
             let errorMessage = `HTTP error! status: ${response.status}`;
             try {
                 const errorData = await response.json();
@@ -87,7 +79,6 @@ class ApiService {
                 }
             } catch (jsonError) {
                 console.log('Could not parse error response as JSON:', jsonError);
-                // Usar o texto da resposta se não for JSON válido
                 try {
                     const errorText = await response.text();
                     if (errorText) {
@@ -98,7 +89,6 @@ class ApiService {
                 }
             }
             
-            // Lançar o erro apropriado com base no status
             switch (response.status) {
                 case 409:
                     throw new Error(errorMessage || 'Conflito: Não foi possível processar a requisição devido a um conflito.');
@@ -114,7 +104,6 @@ class ApiService {
         return await response.json();
     }
 
-    // Método genérico para chamadas PUT
     async put(url, data, token = null) {
         const headers = token ? { ...this.getAuthHeaders(token) } : {
             'Content-Type': 'application/json',
@@ -127,14 +116,12 @@ class ApiService {
             body: JSON.stringify(data)
         });
         
-        // Verificar se houve redirecionamento (possível token expirado)
         if (response.redirected && response.url.includes('login')) {
             console.log('Request was redirected to login page - token may be expired');
             this.handleTokenExpiration();
             throw new Error('Sessão expirada. Faça login novamente.');
         }
         
-        // Verificar se o token expirou
         if (response.status === 401) {
             console.log('Received 401 Unauthorized - token may be invalid or expired');
             this.handleTokenExpiration();
@@ -142,7 +129,6 @@ class ApiService {
         }
         
         if (!response.ok) {
-            // Tentar obter a mensagem de erro da resposta
             let errorMessage = `HTTP error! status: ${response.status}`;
             try {
                 const errorData = await response.json();
@@ -154,7 +140,6 @@ class ApiService {
                 }
             } catch (jsonError) {
                 console.log('Could not parse error response as JSON:', jsonError);
-                // Usar o texto da resposta se não for JSON válido
                 try {
                     const errorText = await response.text();
                     if (errorText) {
@@ -165,7 +150,6 @@ class ApiService {
                 }
             }
             
-            // Lançar o erro apropriado com base no status
             switch (response.status) {
                 case 409:
                     throw new Error(errorMessage || 'Conflito: Não foi possível processar a requisição devido a um conflito.');
@@ -181,7 +165,6 @@ class ApiService {
         return await response.json();
     }
 
-    // Método genérico para chamadas DELETE
     async delete(url, token = null) {
         const headers = token ? { ...this.getAuthHeaders(token) } : {
             'X-Requested-With': 'XMLHttpRequest'
@@ -192,14 +175,12 @@ class ApiService {
             headers
         });
         
-        // Verificar se houve redirecionamento (possível token expirado)
         if (response.redirected && response.url.includes('login')) {
             console.log('Request was redirected to login page - token may be expired');
             this.handleTokenExpiration();
             throw new Error('Sessão expirada. Faça login novamente.');
         }
         
-        // Verificar se o token expirou
         if (response.status === 401) {
             console.log('Received 401 Unauthorized - token may be invalid or expired');
             this.handleTokenExpiration();
@@ -207,7 +188,6 @@ class ApiService {
         }
         
         if (!response.ok) {
-            // Tentar obter a mensagem de erro da resposta
             let errorMessage = `HTTP error! status: ${response.status}`;
             try {
                 const errorData = await response.json();
@@ -219,7 +199,6 @@ class ApiService {
                 }
             } catch (jsonError) {
                 console.log('Could not parse error response as JSON:', jsonError);
-                // Usar o texto da resposta se não for JSON válido
                 try {
                     const errorText = await response.text();
                     if (errorText) {
@@ -230,7 +209,6 @@ class ApiService {
                 }
             }
             
-            // Lançar o erro apropriado com base no status
             switch (response.status) {
                 case 409:
                     throw new Error(errorMessage || 'Conflito: Não foi possível processar a requisição devido a um conflito.');
@@ -246,12 +224,9 @@ class ApiService {
         return await response.json();
     }
 
-    // Método para lidar com token expirado
     handleTokenExpiration() {
-        // Remover token do localStorage
         localStorage.removeItem('authToken');
         
-        // Redirecionar para tela de login após um breve delay
         setTimeout(() => {
             if (typeof window !== 'undefined' && window.location) {
                 window.location.href = '/';

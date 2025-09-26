@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 
-// Hook personalizado para gerenciar chamadas assíncronas
 export const useAsync = (asyncFunction, immediate = true) => {
     const [pending, setPending] = useState(false);
     const [value, setValue] = useState(null);
     const [error, setError] = useState(null);
 
-    // Função para executar a chamada assíncrona
     const execute = async (...params) => {
         try {
             setPending(true);
@@ -22,7 +20,6 @@ export const useAsync = (asyncFunction, immediate = true) => {
         }
     };
 
-    // Executar imediatamente se solicitado
     useEffect(() => {
         if (immediate) {
             execute();

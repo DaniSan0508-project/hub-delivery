@@ -28,7 +28,6 @@ import {
 import { AccessTime as AccessTimeIcon, Kitchen as KitchenIcon, DeliveryDining as DeliveryDiningIcon } from '@mui/icons-material';
 import orderService from '../services/orderService';
 
-// Componente para exibir informações de pagamento
 const PaymentBadge = ({ payment }) => {
     if (!payment) return null;
 
@@ -76,7 +75,6 @@ const PaymentBadge = ({ payment }) => {
     );
 };
 
-// Componente para exibir informações de troco
 const CashChangeInfo = ({ payment }) => {
     if (!payment?.requires_cash_change) return null;
 
@@ -92,7 +90,6 @@ const CashChangeInfo = ({ payment }) => {
     );
 };
 
-// Componente para identificar pedidos agendados
 const ScheduledOrderBadge = ({ order }) => {
     if (!order?.is_scheduled) return null;
 
@@ -108,7 +105,6 @@ const ScheduledOrderBadge = ({ order }) => {
     );
 };
 
-// Função para formatar hora de forma amigável
 const formatTime = (dateTimeStr) => {
     if (!dateTimeStr) return 'N/A';
     const date = new Date(dateTimeStr);
@@ -119,7 +115,6 @@ const formatTime = (dateTimeStr) => {
     });
 };
 
-// Função para calcular tempo restante
 const getTimeStatus = (order) => {
     if (!order?.preparation_start_time || !order?.delivery_window?.start) return 'Horário não definido';
 
@@ -137,7 +132,6 @@ const getTimeStatus = (order) => {
     }
 };
 
-// Função auxiliar para calcular progresso
 const calculateProgress = (order) => {
     if (!order?.preparation_start_time || !order?.delivery_window?.end) return 0;
 
@@ -164,11 +158,9 @@ const getProgressLabel = (order) => {
     return "Janela de entrega encerrada";
 };
 
-// Componente para exibir as janelas de tempo de forma amigável
 const TimeWindowDisplay = ({ order }) => {
     if (!order?.is_scheduled) return null;
 
-    // Alerta para quando o tempo de preparo já deveria ter começado
     const showUrgentAlert = order.preparation_start_time &&
         new Date() > new Date(order.preparation_start_time);
 
@@ -321,15 +313,12 @@ const OrderDetailsModal = ({ open, onClose, orderId }) => {
         }
     }, [open, orderId]);
 
-    // Calculate total order value
     const calculateOrderTotal = (items) => {
         if (!items || !Array.isArray(items)) return 0;
         return items.reduce((total, item) => total + (item.unit_price * item.quantity), 0);
     };
 
-    // Get the first order from the array
     console.log('order:', order);
-    // Verificar se order é um objeto com propriedade orders que é um array
     const orderData = order && order.orders && Array.isArray(order.orders) && order.orders.length > 0
         ? order.orders[0]
         : (order && Array.isArray(order) && order.length > 0 ? order[0] : null);

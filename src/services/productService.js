@@ -1,6 +1,5 @@
 import api from './api';
 
-// Serviço para produtos
 class ProductService {
     async getProducts(token) {
         return await api.get(`${api.baseERPUrl}/products`, token);

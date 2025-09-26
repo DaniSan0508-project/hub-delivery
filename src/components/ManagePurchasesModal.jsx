@@ -91,7 +91,6 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [itemQuantities, setItemQuantities] = useState({}); // Estado para controlar quantidades
 
-  // Funções para controlar a quantidade de itens
   const increaseQuantity = (itemId) => {
     setItemQuantities(prev => ({
       ...prev,
@@ -132,7 +131,6 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
         const token = localStorage.getItem('authToken');
         const items = await sellableItemsService.getSellableItems(token);
         
-        // Filtrar itens com base no termo de busca
         const filteredItems = search 
           ? items.filter(item => 
               item.itemName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -165,7 +163,6 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
         const token = localStorage.getItem('authToken');
         const items = await sellableItemsService.getSellableItems(token);
         
-        // Filtrar itens com base no termo de busca
         const filteredItems = search 
           ? items.filter(item => 
               item.itemName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -194,7 +191,6 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
       
       console.log('Token being used:', token ? 'Token exists' : 'No token');
       
-      // Obter o ID do pedido no nosso sistema
       const orderData = order && order.orders && Array.isArray(order.orders) && order.orders.length > 0 
         ? order.orders[0] 
         : (order && Array.isArray(order) && order.length > 0 ? order[0] : null);
@@ -205,10 +201,8 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
         throw new Error('Não foi possível obter o ID do pedido');
       }
       
-      // Obter a quantidade selecionada para este item
       const quantity = getQuantity(item.itemId);
       
-      // Usar a estrutura de dados correta para adicionar item ao pedido
       const itemData = {
         item_id: item.itemId,
         quantity: quantity,
@@ -223,13 +217,11 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
       await orderService.addOrderItem(internalOrderId, itemData, token);
       setSuccess(`Produto "${item.itemName}" adicionado à compra com sucesso!`);
       
-      // Resetar a quantidade para 1 após adicionar
       setItemQuantities(prev => ({
         ...prev,
         [item.itemId]: 1
       }));
       
-      // Reload order details to show updated items
       const loadOrderDetails = async () => {
         try {
           const token = localStorage.getItem('authToken');
@@ -242,14 +234,12 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
       };
       await loadOrderDetails();
       
-      // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccess(null);
       }, 3000);
     } catch (err) {
       console.error('Error adding item to purchase:', err);
       
-      // Tratar erros específicos da API
       if (err.message && err.message.includes('Order must be in SEPARATION_STARTED status')) {
         setError('O pedido precisa estar no status "Separação Iniciada" para adicionar itens. Por favor, inicie a separação do pedido primeiro.');
       } else if (err.message) {
@@ -262,13 +252,11 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
     }
   };
 
-  // Calculate total order value
   const calculateOrderTotal = (items) => {
     if (!items || !Array.isArray(items)) return 0;
     return items.reduce((total, item) => total + (item.unit_price * item.quantity), 0);
   };
 
-  // Get the first order from the array
   const orderData = order && order.orders && Array.isArray(order.orders) && order.orders.length > 0 
     ? order.orders[0] 
     : (order && Array.isArray(order) && order.length > 0 ? order[0] : null);
