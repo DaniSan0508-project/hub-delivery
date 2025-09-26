@@ -130,13 +130,47 @@ function Sincronizacao() {
         navigate('/');
     };
 
-    // Handle input changes for new product
     const handleProductInputChange = (e) => {
         const { name, value } = e.target;
-        setNewProduct({
-            ...newProduct,
-            [name]: name === 'value' || name === 'stock' ? value : value
-        });
+
+        if (name === 'value') { // 'value' é o seu campo de preço
+            // 1. Remove tudo que não for um dígito
+            const onlyDigits = value.replace(/\D/g, '');
+
+            // Se o campo ficar vazio, limpa o estado
+            if (onlyDigits === '') {
+                setNewProduct({ ...newProduct, [name]: '' });
+                return;
+            }
+
+            // 2. Converte a string de dígitos para um número e divide por 100
+            const numericValue = parseInt(onlyDigits, 10) / 100;
+
+            // 3. Formata o número para o padrão de moeda do Brasil (pt-BR)
+            const formattedValue = numericValue.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+
+            setNewProduct({
+                ...newProduct,
+                [name]: formattedValue
+            });
+
+        } else if (name === 'stock') {
+            // Lógica para o estoque (continua a mesma)
+            const stockValue = parseInt(value, 10);
+            setNewProduct({
+                ...newProduct,
+                [name]: isNaN(stockValue) ? '' : stockValue,
+            });
+        } else {
+            // Para todos os outros campos (barcode, name, etc.)
+            setNewProduct({
+                ...newProduct,
+                [name]: value
+            });
+        }
     };
 
     // Add product to sync list
@@ -411,11 +445,15 @@ function Sincronizacao() {
                                             fullWidth
                                             label="Preço (R$)"
                                             name="value"
-                                            type="number"
                                             value={newProduct.value}
                                             onChange={handleProductInputChange}
                                             size="small"
                                             required
+                                            inputProps={{
+                                                inputMode: 'decimal',
+                                                pattern: '[0-9]*(,[0-9]{2})?',
+                                                placeholder: '0,00'
+                                            }}
                                         />
                                     </Grid>
                                     <Grid item xs={12} sm={6}>
@@ -520,7 +558,7 @@ function Sincronizacao() {
                             )}
                         </Paper>
                     </Grid>
-                    
+
                     {/* Section for Sync Produtos */}
                     <Grid item xs={12} md={6}>
                         <Paper elevation={3} sx={{ p: 3 }}>
@@ -530,7 +568,7 @@ function Sincronizacao() {
                             <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
                                 Visualize os produtos sincronizados com o hub
                             </Typography>
-                            
+
                             <Button
                                 variant="contained"
                                 startIcon={<SyncIcon />}
@@ -542,10 +580,10 @@ function Sincronizacao() {
                         </Paper>
                     </Grid>
                 </Grid>
-                
+
                 {/* Modal for Sync Produtos */}
-                <Dialog 
-                    open={openSyncProdutosModal} 
+                <Dialog
+                    open={openSyncProdutosModal}
                     onClose={handleCloseSyncProdutosModal}
                     maxWidth="md"
                     fullWidth
@@ -553,14 +591,14 @@ function Sincronizacao() {
                     <DialogTitle>
                         Produtos Sincronizados
                     </DialogTitle>
-                    
+
                     <DialogContent dividers>
                         {errorSyncProdutos && (
                             <Alert severity="error" sx={{ mb: 2 }}>
                                 {errorSyncProdutos}
                             </Alert>
                         )}
-                        
+
                         {/* Filters */}
                         <Grid container spacing={2} sx={{ mb: 2 }}>
                             <Grid item xs={12} sm={6}>
@@ -574,8 +612,8 @@ function Sincronizacao() {
                                     InputProps={{
                                         endAdornment: (
                                             <InputAdornment position="end">
-                                                <SearchIcon 
-                                                    onClick={handleSearchSubmit} 
+                                                <SearchIcon
+                                                    onClick={handleSearchSubmit}
                                                     style={{ cursor: 'pointer' }}
                                                 />
                                             </InputAdornment>
@@ -639,7 +677,7 @@ function Sincronizacao() {
                                 </Button>
                             </Grid>
                         </Grid>
-                        
+
                         {loadingSyncProdutos ? (
                             <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
                                 <CircularProgress />
@@ -676,10 +714,10 @@ function Sincronizacao() {
                                                         <TableCell align="right">R$ {(parseFloat(produto.value || 0)).toFixed(2)}</TableCell>
                                                         <TableCell align="center">{produto.stock_quantity || produto.quantity || 0}</TableCell>
                                                         <TableCell align="center">
-                                                            <Typography 
-                                                                variant="caption" 
-                                                                sx={{ 
-                                                                    color: produto.sync_status === 'synced' ? 'success.main' : 'warning.main' 
+                                                            <Typography
+                                                                variant="caption"
+                                                                sx={{
+                                                                    color: produto.sync_status === 'synced' ? 'success.main' : 'warning.main'
                                                                 }}
                                                             >
                                                                 {produto.sync_status === 'synced' ? 'Sincronizado' : 'Não sincronizado'}
@@ -697,13 +735,13 @@ function Sincronizacao() {
                                         </TableBody>
                                     </Table>
                                 </TableContainer>
-                                
+
                                 {/* Pagination info */}
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                                     <Typography variant="body2" color="textSecondary">
                                         Mostrando {(currentPage - 1) * 10 + 1} - {Math.min(currentPage * 10, totalItems)} de {totalItems} produtos
                                     </Typography>
-                                    
+
                                     <Box sx={{ display: 'flex', gap: 1 }}>
                                         <Button
                                             variant="outlined"
@@ -713,15 +751,15 @@ function Sincronizacao() {
                                         >
                                             Anterior
                                         </Button>
-                                        
-                                        <Typography variant="body2" sx={{ 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            px: 2 
+
+                                        <Typography variant="body2" sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            px: 2
                                         }}>
                                             Página {currentPage} de {totalPages}
                                         </Typography>
-                                        
+
                                         <Button
                                             variant="outlined"
                                             size="small"
@@ -735,7 +773,7 @@ function Sincronizacao() {
                             </>
                         )}
                     </DialogContent>
-                    
+
                     <DialogActions>
                         <Button onClick={handleCloseSyncProdutosModal}>Fechar</Button>
                     </DialogActions>
