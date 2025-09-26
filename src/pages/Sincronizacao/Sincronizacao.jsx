@@ -180,16 +180,19 @@ function Sincronizacao() {
             return;
         }
 
+        // Use a função de ajuda para converter "100,25" (string) para 100.25 (número)
+        const priceAsNumber = unformatCurrency(newProduct.value);
+
         const product = {
             ...newProduct,
-            value: parseFloat(newProduct.value),
-            stock: parseInt(newProduct.stock),
+            value: priceAsNumber, // <-- CORREÇÃO APLICADA AQUI
+            stock: parseInt(newProduct.stock) || 0,
             status: newProduct.status === true || newProduct.status === 'true'
         };
 
         setProductsToSync([...productsToSync, product]);
 
-        // Reset form
+        // Resetar o formulário
         setNewProduct({
             barcode: '',
             name: '',
@@ -200,6 +203,17 @@ function Sincronizacao() {
 
         setSuccessMessage('Produto adicionado à lista de sincronização.');
         setTimeout(() => setSuccessMessage(null), 3000);
+    };
+
+    // Lembre-se de ter esta função no seu componente
+    const unformatCurrency = (value) => {
+        if (typeof value !== 'string') {
+            return 0;
+        }
+        // Remove os pontos de milhar e substitui a vírgula por ponto
+        const normalizedValue = value.replace(/\./g, '').replace(',', '.');
+        // Usa parseFloat para manter as casas decimais
+        return parseFloat(normalizedValue) || 0;
     };
 
     // Remove product from sync list
