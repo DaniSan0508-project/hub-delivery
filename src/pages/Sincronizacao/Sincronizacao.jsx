@@ -281,6 +281,9 @@ function Sincronizacao() {
                 params.append('status', filterStatus);
             }
 
+            console.log('Making request to:', `http://localhost:8090/api/hub/local/items?${params}`);
+            console.log('Token:', token);
+
             // Using the same base URL pattern as other services in the application
             const response = await fetch(`http://localhost:8090/api/hub/local/items?${params}`, {
                 headers: {
@@ -289,17 +292,23 @@ function Sincronizacao() {
                 }
             });
 
+            console.log('Response status:', response.status);
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
+            console.log('Full API response:', data);
 
-            // API returns structure like: { success: true, data: { data: [...], current_page, last_page, total, per_page, ... } }
-            setSyncProdutos(data.data?.data || []);
-            setTotalPages(data.data?.last_page || 1);
-            setTotalItems(data.data?.total || 0);
-            setCurrentPage(data.data?.current_page || 1);
+            // API returns structure like: { data: [...], pagination: { current_page, total_pages, total, ... } }
+            console.log('Products data:', data.data);
+            console.log('Pagination data:', data.pagination);
+
+            setSyncProdutos(data.data || []);
+            setTotalPages(data.pagination?.total_pages || 1);
+            setTotalItems(data.pagination?.total || 0);
+            setCurrentPage(data.pagination?.current_page || 1);
         } catch (error) {
             console.error('Error fetching sync produtos:', error);
             setErrorSyncProdutos(error.message || 'Erro ao carregar produtos sincronizados.');
@@ -704,10 +713,11 @@ function Sincronizacao() {
                                         <TableHead>
                                             <TableRow>
                                                 <TableCell>Nome</TableCell>
-                                                <TableCell>EAN</TableCell>
+                                                <TableCell>Código de Barras</TableCell>
                                                 <TableCell align="right">Preço</TableCell>
                                                 <TableCell align="center">Estoque</TableCell>
                                                 <TableCell align="center">Status</TableCell>
+                                                <TableCell align="center">Sincronizado</TableCell>
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
@@ -718,15 +728,25 @@ function Sincronizacao() {
                                                             <Typography variant="body2">
                                                                 {produto.name || 'Nome não informado'}
                                                             </Typography>
-                                                            {produto.external_code && (
+                                                            {produto.brand && (
                                                                 <Typography variant="caption" color="textSecondary">
-                                                                    Código: {produto.external_code}
+                                                                    Marca: {produto.brand}
                                                                 </Typography>
                                                             )}
                                                         </TableCell>
                                                         <TableCell>{produto.barcode || 'N/A'}</TableCell>
                                                         <TableCell align="right">R$ {(parseFloat(produto.value || 0)).toFixed(2)}</TableCell>
-                                                        <TableCell align="center">{produto.stock_quantity || produto.quantity || 0}</TableCell>
+                                                        <TableCell align="center">{produto.stock_quantity || 0}</TableCell>
+                                                        <TableCell align="center">
+                                                            <Typography
+                                                                variant="caption"
+                                                                sx={{
+                                                                    color: produto.status ? 'success.main' : 'error.main'
+                                                                }}
+                                                            >
+                                                                {produto.status ? 'Ativo' : 'Inativo'}
+                                                            </Typography>
+                                                        </TableCell>
                                                         <TableCell align="center">
                                                             <Typography
                                                                 variant="caption"
@@ -741,7 +761,7 @@ function Sincronizacao() {
                                                 ))
                                             ) : (
                                                 <TableRow>
-                                                    <TableCell colSpan={5} align="center">
+                                                    <TableCell colSpan={6} align="center">
                                                         Nenhum produto encontrado
                                                     </TableCell>
                                                 </TableRow>
