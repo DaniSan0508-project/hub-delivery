@@ -2,18 +2,13 @@ import api from './api';
 
 class OrderService {
     async getOrders(token) {
-        console.log('OrderService.getOrders called with token:', token);
         const result = await api.get('http://localhost:8090/api/erp/orders', token);
-        console.log('OrderService.getOrders result:', result);
         return result;
     }
 
     async getOrderDetails(orderId, token) {
-        console.log('OrderService.getOrderDetails called with orderId:', orderId);
         const url = `http://localhost:8090/api/erp/orders?order_id=${orderId}`;
-        console.log('OrderService.getOrderDetails calling URL:', url);
         const result = await api.get(url, token);
-        console.log('OrderService.getOrderDetails result:', result);
         return result;
     }
 

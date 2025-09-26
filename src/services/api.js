@@ -10,7 +10,6 @@ class ApiService {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
         };
-        console.log('Auth headers created:', headers);
         return headers;
     }
 
@@ -41,9 +40,6 @@ class ApiService {
             'X-Requested-With': 'XMLHttpRequest'
         };
         
-        console.log('Making POST request to:', url);
-        console.log('Headers:', headers);
-        console.log('Data:', data);
         
         const response = await fetch(url, {
             method: 'POST',
@@ -51,18 +47,13 @@ class ApiService {
             body: JSON.stringify(data)
         });
         
-        console.log('Response status:', response.status);
-        console.log('Response headers:', [...response.headers.entries()]);
-        console.log('Response redirect url (if any):', response.redirected ? response.url : 'Not redirected');
         
         if (response.redirected && response.url.includes('login')) {
-            console.log('Request was redirected to login page - token may be expired');
             this.handleTokenExpiration();
             throw new Error('Sessão expirada. Faça login novamente.');
         }
         
         if (response.status === 401) {
-            console.log('Received 401 Unauthorized - token may be invalid or expired');
             this.handleTokenExpiration();
             throw new Error('Sessão expirada. Faça login novamente.');
         }
@@ -71,21 +62,18 @@ class ApiService {
             let errorMessage = `HTTP error! status: ${response.status}`;
             try {
                 const errorData = await response.json();
-                console.log('Error response data:', errorData);
                 if (errorData.error) {
                     errorMessage = errorData.error;
                 } else if (errorData.message) {
                     errorMessage = errorData.message;
                 }
             } catch (jsonError) {
-                console.log('Could not parse error response as JSON:', jsonError);
                 try {
                     const errorText = await response.text();
                     if (errorText) {
                         errorMessage = errorText;
                     }
                 } catch (textError) {
-                    console.log('Could not parse error response as text:', textError);
                 }
             }
             
@@ -117,13 +105,11 @@ class ApiService {
         });
         
         if (response.redirected && response.url.includes('login')) {
-            console.log('Request was redirected to login page - token may be expired');
             this.handleTokenExpiration();
             throw new Error('Sessão expirada. Faça login novamente.');
         }
         
         if (response.status === 401) {
-            console.log('Received 401 Unauthorized - token may be invalid or expired');
             this.handleTokenExpiration();
             throw new Error('Sessão expirada. Faça login novamente.');
         }
@@ -132,21 +118,18 @@ class ApiService {
             let errorMessage = `HTTP error! status: ${response.status}`;
             try {
                 const errorData = await response.json();
-                console.log('Error response data:', errorData);
                 if (errorData.error) {
                     errorMessage = errorData.error;
                 } else if (errorData.message) {
                     errorMessage = errorData.message;
                 }
             } catch (jsonError) {
-                console.log('Could not parse error response as JSON:', jsonError);
                 try {
                     const errorText = await response.text();
                     if (errorText) {
                         errorMessage = errorText;
                     }
                 } catch (textError) {
-                    console.log('Could not parse error response as text:', textError);
                 }
             }
             
@@ -176,13 +159,11 @@ class ApiService {
         });
         
         if (response.redirected && response.url.includes('login')) {
-            console.log('Request was redirected to login page - token may be expired');
             this.handleTokenExpiration();
             throw new Error('Sessão expirada. Faça login novamente.');
         }
         
         if (response.status === 401) {
-            console.log('Received 401 Unauthorized - token may be invalid or expired');
             this.handleTokenExpiration();
             throw new Error('Sessão expirada. Faça login novamente.');
         }
@@ -191,21 +172,18 @@ class ApiService {
             let errorMessage = `HTTP error! status: ${response.status}`;
             try {
                 const errorData = await response.json();
-                console.log('Error response data:', errorData);
                 if (errorData.error) {
                     errorMessage = errorData.error;
                 } else if (errorData.message) {
                     errorMessage = errorData.message;
                 }
             } catch (jsonError) {
-                console.log('Could not parse error response as JSON:', jsonError);
                 try {
                     const errorText = await response.text();
                     if (errorText) {
                         errorMessage = errorText;
                     }
                 } catch (textError) {
-                    console.log('Could not parse error response as text:', textError);
                 }
             }
             

@@ -81,7 +81,6 @@ function Catalogo() {
       setError(null);
       
       const catalogsData = await catalogService.getCatalogs(token);
-      console.log('Received catalogs data:', catalogsData);
       
       if (catalogsData && catalogsData.data && catalogsData.data.catalogs) {
         setCatalogs(catalogsData.data.catalogs);
@@ -109,7 +108,6 @@ function Catalogo() {
       setError(null);
       
       const itemsData = await catalogService.getCatalogItems(groupId, token);
-      console.log('Received catalog items data:', itemsData);
       
       if (itemsData && itemsData.data && itemsData.data.items) {
         setCatalogItems(itemsData.data.items);

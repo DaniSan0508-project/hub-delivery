@@ -189,7 +189,6 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
       setSuccess(null);
       const token = localStorage.getItem('authToken');
       
-      console.log('Token being used:', token ? 'Token exists' : 'No token');
       
       const orderData = order && order.orders && Array.isArray(order.orders) && order.orders.length > 0 
         ? order.orders[0] 
@@ -209,7 +208,6 @@ const ManagePurchasesModal = ({ open, onClose, orderId }) => {
         ean: item.itemEan || null
       };
       
-      console.log('Adding item to order:', {
         orderId: internalOrderId,
         itemData: itemData
       });

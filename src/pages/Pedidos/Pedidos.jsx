@@ -300,10 +300,8 @@ function Pedidos() {
                 setLoading(true);
             }
             setError(null);
-            console.log('Fetching orders with token:', token);
 
             const ordersData = await orderService.getOrders(token);
-            console.log('Received orders data:', ordersData);
 
             if (!ordersData) {
                 console.error('No orders data received');
@@ -318,7 +316,6 @@ function Pedidos() {
                 return;
             }
 
-            console.log('Number of orders received:', ordersArray.length);
 
             if (isPolling) {
                 const currentOrderIds = new Set(orders.map(order => order.id));
@@ -349,7 +346,6 @@ function Pedidos() {
             }
 
             const transformedOrders = ordersArray.map((order, index) => {
-                console.log(`Processing order ${index}:`, order);
 
                 if (!order || !order.order || !order.consumer) {
                     console.error(`Invalid order structure at index ${index}:`, order);
@@ -376,7 +372,6 @@ function Pedidos() {
                 };
             }).filter(order => order !== null); // Remover pedidos inválidos
 
-            console.log('Transformed orders:', transformedOrders);
 
             const sortedOrders = [...transformedOrders].sort((a, b) => {
                 if (!a.createdAt || !b.createdAt) return 0;

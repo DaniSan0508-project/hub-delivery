@@ -78,8 +78,6 @@ const PaymentBadge = ({ payment }) => {
 const CashChangeInfo = ({ payment }) => {
     if (!payment?.requires_cash_change) return null;
 
-    console.log('CashChangeInfo payment:', payment);
-    console.log('CashChangeInfo payment.cash_change_for:', payment.cash_change_for)
 
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
@@ -291,13 +289,10 @@ const OrderDetailsModal = ({ open, onClose, orderId }) => {
     useEffect(() => {
         const loadOrderDetails = async () => {
             try {
-                console.log('Loading order details for orderId:', orderId);
                 setLoading(true);
                 setError(null);
                 const token = localStorage.getItem('authToken');
-                console.log('Using token:', token ? 'Token exists' : 'No token');
                 const orderData = await orderService.getOrderDetails(orderId, token);
-                console.log('Received order data:', orderData);
                 setOrder(orderData);
             } catch (err) {
                 console.error('Error loading order details:', err);
@@ -308,7 +303,6 @@ const OrderDetailsModal = ({ open, onClose, orderId }) => {
         };
 
         if (open && orderId) {
-            console.log('Component opened with orderId:', orderId);
             loadOrderDetails();
         }
     }, [open, orderId]);
@@ -318,11 +312,9 @@ const OrderDetailsModal = ({ open, onClose, orderId }) => {
         return items.reduce((total, item) => total + (item.unit_price * item.quantity), 0);
     };
 
-    console.log('order:', order);
     const orderData = order && order.orders && Array.isArray(order.orders) && order.orders.length > 0
         ? order.orders[0]
         : (order && Array.isArray(order) && order.length > 0 ? order[0] : null);
-    console.log('orderData:', orderData);
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>

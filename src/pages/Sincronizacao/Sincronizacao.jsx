@@ -269,8 +269,6 @@ function Sincronizacao() {
                 params.append('status', filterStatus === 'active' ? '1' : '0');
             }
 
-            console.log('Making request to:', `http://localhost:8090/api/hub/local/items?${params}`);
-            console.log('Token:', token);
 
             const response = await fetch(`http://localhost:8090/api/hub/local/items?${params}`, {
                 headers: {
@@ -279,17 +277,13 @@ function Sincronizacao() {
                 }
             });
 
-            console.log('Response status:', response.status);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
-            console.log('Full API response:', data);
 
-            console.log('Products data:', data.data);
-            console.log('Pagination data:', data.pagination);
 
             setSyncProdutos(data.data || []);
             setTotalPages(data.pagination?.total_pages || 1);
