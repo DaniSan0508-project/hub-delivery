@@ -38,7 +38,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Menu as MenuIcon,
     Search as SearchIcon,
-    Sync as SyncIcon
+    Sync as SyncIcon,
+    Settings as SettingsIcon
 } from '@mui/icons-material';
 import Sidebar from '../../components/Sidebar';
 import productService from '../../services/productService';
@@ -75,7 +76,11 @@ function Sincronizacao() {
     const [totalItems, setTotalItems] = useState(0);
     const [searchName, setSearchName] = useState('');
     const [searchBarcode, setSearchBarcode] = useState('');
+    const [searchValue, setSearchValue] = useState('');
+    const [dateFilterStart, setDateFilterStart] = useState('');
+    const [dateFilterEnd, setDateFilterEnd] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
+    const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -276,9 +281,23 @@ function Sincronizacao() {
                 params.append('barcode', searchBarcode);
             }
 
+            // Add value filter if exists
+            if (searchValue) {
+                params.append('value', searchValue);
+            }
+
+            // Add date range filters if exists
+            if (dateFilterStart) {
+                params.append('created_at_start', dateFilterStart);
+            }
+            if (dateFilterEnd) {
+                params.append('created_at_end', dateFilterEnd);
+            }
+
             // Add status filter if not 'all'
             if (filterStatus !== 'all') {
-                params.append('status', filterStatus);
+                // Convert status to 1/0 format as required
+                params.append('status', filterStatus === 'active' ? '1' : '0');
             }
 
             console.log('Making request to:', `http://localhost:8090/api/hub/local/items?${params}`);
@@ -622,84 +641,140 @@ function Sincronizacao() {
                             </Alert>
                         )}
 
-                        {/* Filters */}
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    fullWidth
-                                    label="Buscar por Nome"
-                                    variant="outlined"
-                                    size="small"
-                                    value={searchName}
-                                    onChange={handleSearchNameChange}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <SearchIcon
-                                                    onClick={handleSearchSubmit}
-                                                    style={{ cursor: 'pointer' }}
-                                                />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    onKeyPress={(e) => {
-                                        if (e.key === 'Enter') {
-                                            handleSearchSubmit();
-                                        }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    fullWidth
-                                    label="Buscar por Código de Barras"
-                                    variant="outlined"
-                                    size="small"
-                                    value={searchBarcode}
-                                    onChange={handleSearchBarcodeChange}
-                                    onKeyPress={(e) => {
-                                        if (e.key === 'Enter') {
-                                            handleSearchSubmit();
-                                        }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <FormControl fullWidth size="small">
-                                    <InputLabel>Status</InputLabel>
-                                    <Select
-                                        value={filterStatus}
-                                        label="Status"
-                                        onChange={handleFilterStatusChange}
+                        {/* Filters toggle */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                            <Typography variant="h6">Filtros</Typography>
+                            <IconButton
+                                onClick={() => setShowFilters(!showFilters)}
+                                color="primary"
+                            >
+                                <SettingsIcon />
+                            </IconButton>
+                        </Box>
+
+                        {showFilters && (
+                            <Grid container spacing={2} sx={{ mb: 2 }}>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="Buscar por Nome"
+                                        variant="outlined"
+                                        size="small"
+                                        value={searchName}
+                                        onChange={handleSearchNameChange}
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <SearchIcon
+                                                        onClick={handleSearchSubmit}
+                                                        style={{ cursor: 'pointer' }}
+                                                    />
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        onKeyPress={(e) => {
+                                            if (e.key === 'Enter') {
+                                                handleSearchSubmit();
+                                            }
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="Buscar por Código de Barras"
+                                        variant="outlined"
+                                        size="small"
+                                        value={searchBarcode}
+                                        onChange={handleSearchBarcodeChange}
+                                        onKeyPress={(e) => {
+                                            if (e.key === 'Enter') {
+                                                handleSearchSubmit();
+                                            }
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="Buscar por Valor"
+                                        variant="outlined"
+                                        size="small"
+                                        value={searchValue}
+                                        onChange={(e) => setSearchValue(e.target.value)}
+                                        onKeyPress={(e) => {
+                                            if (e.key === 'Enter') {
+                                                handleSearchSubmit();
+                                            }
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Status</InputLabel>
+                                        <Select
+                                            value={filterStatus}
+                                            label="Status"
+                                            onChange={handleFilterStatusChange}
+                                        >
+                                            <MenuItem value="all">Todos</MenuItem>
+                                            <MenuItem value="active">Ativo</MenuItem>
+                                            <MenuItem value="inactive">Inativo</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="Data Início"
+                                        type="datetime-local"
+                                        value={dateFilterStart}
+                                        onChange={(e) => setDateFilterStart(e.target.value)}
+                                        size="small"
+                                        InputLabelProps={{
+                                            shrink: true,
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="Data Fim"
+                                        type="datetime-local"
+                                        value={dateFilterEnd}
+                                        onChange={(e) => setDateFilterEnd(e.target.value)}
+                                        size="small"
+                                        InputLabelProps={{
+                                            shrink: true,
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <Button
+                                        variant="contained"
+                                        onClick={handleSearchSubmit}
+                                        sx={{ mr: 1 }}
                                     >
-                                        <MenuItem value="all">Todos</MenuItem>
-                                        <MenuItem value="active">Ativo</MenuItem>
-                                        <MenuItem value="inactive">Inativo</MenuItem>
-                                    </Select>
-                                </FormControl>
+                                        Filtrar
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        onClick={() => {
+                                            setSearchName('');
+                                            setSearchBarcode('');
+                                            setSearchValue('');
+                                            setDateFilterStart('');
+                                            setDateFilterEnd('');
+                                            setFilterStatus('all');
+                                            setCurrentPage(1);
+                                            fetchSyncProdutos(1);
+                                        }}
+                                    >
+                                        Limpar Filtros
+                                    </Button>
+                                </Grid>
                             </Grid>
-                            <Grid item xs={12}>
-                                <Button
-                                    variant="contained"
-                                    onClick={handleSearchSubmit}
-                                    sx={{ mr: 1 }}
-                                >
-                                    Filtrar
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    onClick={() => {
-                                        setSearchName('');
-                                        setSearchBarcode('');
-                                        setFilterStatus('all');
-                                        setCurrentPage(1);
-                                        fetchSyncProdutos(1);
-                                    }}
-                                >
-                                    Limpar Filtros
-                                </Button>
-                            </Grid>
-                        </Grid>
+                        )}
 
                         {loadingSyncProdutos ? (
                             <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
@@ -716,7 +791,7 @@ function Sincronizacao() {
                                                 <TableCell>Código de Barras</TableCell>
                                                 <TableCell align="right">Preço</TableCell>
                                                 <TableCell align="center">Estoque</TableCell>
-                                                <TableCell align="center">Status</TableCell>
+                                                <TableCell align="center">Ativo</TableCell>
                                                 <TableCell align="center">Sincronizado</TableCell>
                                             </TableRow>
                                         </TableHead>
